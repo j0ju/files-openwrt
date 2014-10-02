@@ -1,0 +1,37 @@
+#!/bin/sh
+
+#set -x
+
+SRC=/etc/init.d
+TARGET=/usr/local/sbin
+
+for initfile in $SRC/*; do
+    file="$(basename "$initfile")"
+    rcfile="${TARGET}/rc${file}"
+    
+    if [ -x "$initfile" -a ! -d "$initfile" ]; then
+		if [ ! -e "$rcfile" ]; then
+			echo -n "$initfile -> $rcfile "
+			ln -sf "$initfile" "$rcfile" && echo Ok. || echo "failed."
+		fi
+    fi
+done
+
+
+for rcfile in $TARGET/rc*; do
+	link="$(readlink "$rcfile")"
+	case "$link" in
+		"$SRC"* ) : ;;
+		* ) continue ;;
+	esac
+    file="$(basename "$rcfile")"
+    file="${file#??}"
+    initfile="$SRC/$file"
+    
+    if [ -L "$rcfile" ]; then
+		if [ ! -x "$initfile" -o -d "$initfile" ]; then
+		    echo -n "removed old $rcfile "
+	    	rm -f "$rcfile" && echo Ok. || echo "failed."
+		fi
+    fi
+done      
