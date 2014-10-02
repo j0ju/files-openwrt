@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ -n "$1" ]; then
+	size="$1"
+	case "$size" in
+		*m ) size=$(( ${size%m} * 1024 )) ;;
+		*g ) size=$(( ${size%g} * 1024 * 1024 )) ;;
+		*% ) size=$(( $(awk '/MemTotal/ {print $2}' /proc/meminfo ) * ${size%%%} / 100 )) ;;
+		*k ) size=$(( ${size%k} )) ;;
+		* ) size=${size} ;;
+	esac
+	size=$(($size+0))
+	
+	if [ "$size" -gt 0 ]; then
+		df /tmp
+		size="$size"k
+		mount -o remount,size=$size /tmp
+		df /tmp | tail -n -1
+	fi
+else
+	df /tmp
+fi
+
