@@ -1,0 +1,13 @@
+#!/bin/sh
+
+while [ "$*" ]; do
+	cmd="$1"
+	for pid in $(pgrep "$cmd") ""; do
+		[ -z "$pid" ] && continue
+		[ "$pid" = "$$" ] && continue
+		[ -r /proc/$pid/cmdline ] || continue
+		echo "$cmd[$pid]:	$(tr '\000' ' ' < /proc/$pid/cmdline)"
+	done
+	shift
+done
+
