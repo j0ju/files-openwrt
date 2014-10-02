@@ -1,0 +1,57 @@
+#!/bin/sh
+
+  DEFAULT_ROOTHOME=/tmp
+  DEFAULT_HOSTNAME=w8970
+  DEFAULT_TZ="CET-1CEST,M3.5.0,M10.5.0/3"
+
+  RC_TO_DISABLE=
+  #RC_TO_DISABLE="$RC_TO_DISABLE qos"
+  #RC_TO_DISABLE="$RC_TO_DISABLE firewall"
+  RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
+  RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
+
+iproxd
+#- set default root passwort to root, if empty and set root to /tmp
+  if grep ^root:: /etc/shadow > /dev/null; then
+    echo root:root | chpasswd && /etc/init.d/telnet stop > /dev/null 2>&1
+    sed -i -r -e '/^root/ s@(root:[^:]+:[0-9]+:[0-9]+:[^:]+):[^:]+:(.*$)@\1:'"$DEFAULT_ROOTHOME"':\2@' /etc/passwd
+  fi
+
+#- generate sane defaults to hostname and TZ
+  uci set system.@system[0].hostname="$DEFAULT_HOSTNAME"
+  sysctl -w kernel.hostname="$DEFAULT_HOSTNAME"
+
+  uci set system.@system[0].timezone="$DEFAULT_TZ"
+  echo "$DEFAULT_TZ" > /var/TZ
+
+#- disable services
+  local _rc
+  for _rc in $RC_TO_DISABLE; do
+    if [ -x /etc/init.d/$_rc ]; then
+      /etc/init.d/$_rc disable || :
+    fi
+  done
+
+#- uci modifications
+  #- disable wifi
+    uci set wireless.radio0.disabled=1
+  #- disable atm
+    #uci set network.atm.auto=0
+    uci delete network.atm
+  #- set correct ANNEX
+    uci set network.dsl.annex=b
+    uci set network.dsl.tone=bv
+    uci set network.dsl.xfer_mode=ptm
+  #- prevent autostart of wan with bad defaults
+    uci set network.wan.auto=0
+  #- set ptm mode
+    uci set network.wan.ifname=ptm0
+  #- local wireless defaults
+    uci set wireless.@wifi-iface[0].mode=ap
+    uci set wireless.@wifi-iface[0].ssid=w8970
+    uci set wireless.@wifi-iface[0].encryption="mixed-psk+ccmp"
+    uci set wireless.@wifi-iface[0].key="TP-Link W8970!"
+
+#- uci commit
+  uci commit
+
