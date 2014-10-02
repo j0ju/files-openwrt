@@ -1,0 +1,17 @@
+#!/bin/sh
+#set -x
+
+file="$1"
+[ "$file" ] || exit 1
+
+count="${2:-7}"
+count=$(($count))
+
+i=$((count-1))
+while [ $i -gt 0 ]; do
+	i=$(($i-1))
+	[ -f "$file.$i" ] && mv -f "$file.$i" "$file.$(($i+1))"
+done
+
+[ -f "$file" ] && mv -f "$file" "$file.0"
+
