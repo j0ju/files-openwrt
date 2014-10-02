@@ -1,0 +1,155 @@
+#!/bin/sh
+# vim:foldmethod=marker:ts=4
+
+#- intial PATH, PS1 {{{
+	export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+	PS1='\u@\h:\w\$ '
+
+	[ -d /usr/local/bin ] && PATH="/usr/local/bin:$PATH"
+	[ -d /usr/local/sbin ] && PATH="/usr/local/sbin:$PATH"
+
+	[ -d /opt/bin ] &&  PATH="$PATH:/opt/bin"
+	[ -d /opt/sbin ] && PATH="$PATH:/opt/sbin"
+# }}}
+#- some info about the host system {{{
+	hostinfo() {
+		[ -f /etc/banner ] && cat /etc/banner
+		uptime; echo -n " "; uname -a; echo
+	}
+	if [ -z "$banner_read" ]; then
+		hostinfo
+		banner_read=yes
+	fi
+# }}}
+#- pager, editor, visual setup # {{{
+	alias more=less
+	export PAGER=less
+
+	if which vim 2> /dev/null 1>&2 ; then
+		alias vi=vim
+		export EDITOR=vim
+		export VISUAL=vim
+	else
+		 alias vim=vi && alias vi=vim
+	fi
+# }}}
+#- system tools # {{{
+	[ -x /sbin/arp ] || arp() { cat /proc/net/arp; }
+	[ -z /bin/ldd ] || ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }
+# }}}
+#- user convinience for RO/RW /-filesystem # {{{
+	_rootfs_mode="$(awk -F '[ ,]' '/^\/dev\/[0-9a-z]+ \/ [0-9a-z]+/ {print toupper($4)}' /proc/mounts)"
+	[ "$_rootfs_mode" = RW ] && PS1="[$_rootfs_mode] $PS1"
+	alias RO="root-ro; relogin #"
+	alias RW="root-rw; relogin #"
+# }}}
+#- enhanced prompt # {{{
+    TXTBLK='\[\e[30m\]' # Black
+    TXTRED='\[\e[31m\]' # Red
+    TXTGRN='\[\e[32m\]' # Green
+    TXTYLW='\[\e[1m\e[33m\]' # Yellow
+    TXTBRN='\[\e[33m\]' # Brown
+    TXTBLU='\[\e[34m\]' # Blue
+    TXTPUR='\[\e[35m\]' # Purple
+    TXTCYN='\[\e[36m\]' # Cyan
+    TXTWHT='\[\e[37m\]' # White
+
+    TXTREG='\[\e[0m\]'  # Regular
+    TXTBLD='\[\e[1m\]'  # Bold
+    TXTUND='\[\e[4m\]'  # Underline
+    TXTBLN='\[\e[5m\]'  # Blink
+    TXTINV='\[\e[7m\]'  # Inverse
+    TXTRST='\[\e[0m\]'  # Text Reset
+
+    CLRLINE='\[\e[K\]'
+
+    BGBLK='\[\e[40m\]'   # Black
+    BGRED='\[\e[41m\]'   # Red
+    BGGRN='\[\e[42m\]'   # Green
+    BGYLW='\[\e[43m\]'   # Yellow
+    BGBLU='\[\e[44m\]'   # Blue
+    BGPUR='\[\e[45m\]'   # Purple
+    BGCYN='\[\e[46m\]'   # Cyan
+    BGWHT='\[\e[47m\]'   # White
+
+    CSRSAV='\[\e[s\]'     # Save CSR Pos
+    CSRRST='\[\e[u\]'     # Restore CSR Pos
+    CSRHOME='\[\e[1;1H\]'   # Set CSRPOS x/y=1/1
+
+    CSR_PS1_UPRIGHT="$(stty -a | tr ';' '\n' | awk '/col/ {print $2}')"
+    #CSR_PS1='\[\e[1;'"$(($CSR_PS1_UPRIGHT - 20))"'H\]'   # Set CSRPOS x/y=_CSR_PS1_UPRIGHT-20/1
+    CSR_PS1='\[\e[1;'"$((($CSR_PS1_UPRIGHT - 30)/2))"'H\]'   # Set ca center CSRPOS
+
+    PS1_NONPRINT_BEGIN='\['
+    PS1_NONPRINT_END='\]'
+
+    case "$TERM" in
+	    rxvt* | urxvt | xterm | screen )
+            PS1_RS='${PS1_NONPRINT_BEGIN} ${PS1_NONPRINT_END}${TXTYLW}${TXTINV}${PS1_NONPRINT_BEGIN} $\? = ${?} ${PS1_NONPRINT_END}${TXTRST}'
+            PS1_BG='${!:+${PS1_NONPRINT_BEGIN} ${PS1_NONPRINT_END}${TXTGRN}${TXTINV}${PS1_NONPRINT_BEGIN} \044! = ${!} ${PS1_NONPRINT_END}${TXTRST}}'
+
+            PS1_RW=
+            [ "$_rootfs_mode" = RW ] && PS1_RW="${PS1_NONPRINT_BEGIN} ${PS1_NONPRINT_END}${TXTRED}${TXTINV} / ${TXTBLN} RW ${TXTRST}"
+
+            PS1="${CSRSAV}${CSR_PS1}${PS1_RW}${PS1_RS}${PS1_BG}${PS1_NONPRINT_BEGIN} ${PS1_NONPRINT_END}${CSRRST}${TXTRST}${PS1}"
+            ;;
+        * ) : #
+		    ;;
+    esac
+# }}}
+#- session cleanup - for bg processes {{{
+	_CLEANUP_TRAPS="EXIT 1 3 6 15"
+	_CLEANUP_PROCS=
+	_CLEANUP() { local p; for p in $_CLEANUP_PROCS; do "$p"; done; trap '' $_CLEANUP_TRAPS; }
+	trap '_CLEANUP; exit $?;' $_CLEANUP_TRAPS
+# }}}
+#- handy aliases # {{{
+	alias relogin=". /etc/profile #"
+	alias rL="relogin #"
+
+	_CLEANUP_log() { [ -n "$_LOGREAD_PID" ] && { kill "$_LOGREAD_PID" 2>/dev/null 1>&2; }; }
+	alias log='_CLEANUP_log; logread -f & _LOGREAD_PID=$!; logread #'
+	_CLEANUP_PROCS="$_CLEANUP_PROCS _CLEANUP_log"
+
+	dSH() {
+		local sh="$(which "$1")"
+		shift
+		sh -x "$sh" "$@"
+	}
+
+	[ -x /usr/bin/ps ] && alias ps=/usr/bin/ps
+
+	alias l="ls -la"
+	alias j=jobs
+
+	#alias reboot="echo '# /sbin/reboot ?' #"
+	#alias halt="echo '# /sbin/halt ?' #"
+
+	_IFSTAT_BIN="$(which ifstat)" # /opt/bin/ifstat
+    _IFSTAT_ITF=
+    _IFSTAT_ITF="$_IFSTAT_ITF br-lan"
+    _IFSTAT_ITF="$_IFSTAT_ITF eth0"
+    _IFSTAT_ITF="$_IFSTAT_ITF wlan0"
+    _IFSTAT_ITF="$_IFSTAT_ITF br-wan"
+    _IFSTAT_ITF="$_IFSTAT_ITF nas0"
+    _IFSTAT_ITF="$_IFSTAT_ITF ptm0"
+    _IFSTAT_ITF="$_IFSTAT_ITF ptm0.7"
+    _IFSTAT_ITF="$_IFSTAT_ITF pppoe-wan"
+    ifstat() {
+        if [ -n "$*" -o -z "$_IFSTAT_ITF" ]; then
+            "$_IFSTAT_BIN" "$@"
+        else
+            local itf=; for i in $_IFSTAT_ITF; do
+                [ -d /sys/class/net/$i ] && itf="$itf -i $i"
+            done
+            "$_IFSTAT_BIN" $itf 2
+        fi
+    }
+
+	if [ -z "$STY" -a -z "$TMUX" ]; then
+        if which tx > /dev/null && which tmux > /dev/null; then
+            alias rS='exec tx'
+            alias reattachScreen='exec tx'
+        fi
+    fi
+# }}}
