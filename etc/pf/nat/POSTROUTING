@@ -1,0 +1,4 @@
+# nat/POSTROUTING
+
+# masquerading for the lazy
+! -o lo -j MASQUERADE

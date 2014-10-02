@@ -1,0 +1,8 @@
+# filter packets by -j reject not to be logged before rejected
+# [match] -j reject
+#-m addrtype --dst-type BROADCAST -p udp -j reject
+#-m addrtype --dst-type MULTICAST -p udp -j reject
+
+# call log_reject
+-j log_reject
+

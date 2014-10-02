@@ -1,0 +1,6 @@
+#- stateful
+-m state --state ESTABLISHED,RELATED -j ACCEPT
+
+#- rest verwerfen
+-j log_reject
+-j reject

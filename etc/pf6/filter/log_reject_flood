@@ -1,0 +1,2 @@
+-m limit --limit 3/sec --limit-burst 5 -j LOG --log-prefix "flood: " 
+-j reject

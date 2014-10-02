@@ -1,0 +1,9 @@
+#- udp
+-p udp -m limit --limit 1/s -j REJECT --reject-with icmp-port-unreachable
+-p udp -j DROP
+
+#- tcp
+-p tcp -j REJECT --reject-with icmp-admin-prohibited
+
+#- rest
+-j DROP

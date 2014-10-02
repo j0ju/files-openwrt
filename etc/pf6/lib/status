@@ -1,0 +1,11 @@
+# vim:ft=sh:ts=4
+
+shift
+[ "$*" ] && tables="$*"
+
+for table in $tables; do
+	iptables="ip6tables -t ${table}"
+
+	$iptables -nvL 
+done
+

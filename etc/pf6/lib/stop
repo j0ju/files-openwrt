@@ -1,0 +1,29 @@
+# vim: ft=sh
+set -e
+
+echo -n "$0: clearing iptables packet filter rules ..."
+
+for table in $tables; do
+	[ -d "${rulesdir}/${table}" ] || {
+		echo "$0: rules dir for table ${table} does not exist."
+		continue
+	} >&2
+	
+	echo -n "$table "
+
+	ip6tables="iptables -t ${table}"
+
+	$iptables -F 
+	$iptables -X
+
+	case "$table" in
+		filter)
+			$iptables -P INPUT ACCEPT
+			$iptables -P FORWARD ACCEPT
+			$iptables -P OUTPUT ACCEPT
+		;;
+	esac
+
+done
+
+echo "."

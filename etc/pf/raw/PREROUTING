@@ -1,0 +1,2 @@
+# raw/PREROUTING
+#-p udp --dport 53 -j NOTRACK

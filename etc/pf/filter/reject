@@ -1,0 +1,15 @@
+# reject traffic sane for known protocols
+
+#- tcp UNICAST
+-p tcp -j REJECT --reject-with icmp-admin-prohibited
+
+#- 1st udp BROADCAST / MULTICAST DROP
+-m addrtype --dst-type BROADCAST -p udp -j DROP
+-m addrtype --dst-type MULTICAST -p udp -j DROP
+
+#- 2nd udp UNICAST
+-p udp -m limit --limit 1/s -j REJECT --reject-with icmp-port-unreachable
+-p udp -j DROP
+
+# any other traffic is dropped
+-j DROP

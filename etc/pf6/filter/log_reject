@@ -1,0 +1,3 @@
+# logs everything and calls reject afterwards
+-m limit --limit 3/sec --limit-burst 5 -j LOG --log-prefix "rejected: "
+-j reject
