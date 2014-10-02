@@ -1,0 +1,8 @@
+#!/bin/sh
+#  /etc/rc.local
+
+#- user config files for root in temp legen
+  cp -a /root/.[a-z]* /tmp
+
+# end
+exit 0
