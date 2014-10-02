@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if ! [ $$ = 1 ]; then
+  echo "$0[$$]: not started as PID 1."
+  exit 1
+fi >&2
+
+killall watchdog 2> /dev/null
+killall hotplug2 2> /dev/null
+
+cd /
+
+# open fd 3
+exec 3> /dev/null
+
+# enable watchdog
+exec 3> /dev/watchdog
+
+# start rom as fallback procd
+[ -x /lib/procd ] && exec /lib/procd
+
+# fallback
+[ -x /rom/sbin/procd ] && exec /rom/sbin/procd
+
+# fallthrough
+exec /bin/sh
+

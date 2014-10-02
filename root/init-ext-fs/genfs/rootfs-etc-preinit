@@ -1,0 +1,60 @@
+#!/bin/sh
+
+DEBUG=no # yes                # set -x
+SHELL_1ST=no             # exec to /bin/sh on first run
+
+#INIT=/bin/sh             # debugging
+INIT=/sbin/init          # OpenWrt 12.09 Attitude Adjustment, generic
+#INIT=/sbin/procd         # OpenWrt Barrier Breaker
+#INIT=/lib/procd          # OpenWrt Barrier Breaker (modified)
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+if ! [ $$ = 1 ]; then
+  echo "$0: not run as PID 1"
+  exit 1
+fi >&2
+
+[ "$DEBUG" = yes ] && set -x
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+mount -t proc proc /proc
+trap "ifconfig eth0 192.168.1.1; ifconfig lo 127.0.0.1; telnetd -l /bin/login.sh & exec /bin/sh" EXIT
+set -e
+
+[ "$SHELL_1ST" = yes ] && exec /bin/sh
+
+killall hotplug2 2> /dev/null || :
+killall ubusd 2> /dev/null || :
+killall netifd 2> /dev/null || :
+mount -o move /mnt/dev /dev || :
+[ -c /dev/console ] &&  exec < /dev/console 1>/dev/console 2>/dev/console
+mount -o move /mnt/sys /sys
+mount -o move /mnt/tmp /tmp
+umount /mnt/proc
+
+mkdir -p /tmp/rom
+mount -o move /mnt/rom /tmp/rom
+mkdir -p /tmp/overlay
+mount -o move /mnt/overlay /tmp/overlay
+umount /mnt || :
+umount /tmp/rom || :
+umount /tmp/overlay || :
+rmdir /tmp/rom /tmp/overlay || :
+
+#- remount RW
+#       mount -o remount,compress=lzo,noatime /
+#       mount -o remount,ro /
+#       mount -o remount,rw /
+chmod 1777 /tmp/.
+
+#- cleanup traps
+trap "" EXIT
+
+#- init, procd or debugging shell
+if [ -x "$INIT" ]; then
+  exec "$INIT"
+fi
+
+exec /bin/sh
+

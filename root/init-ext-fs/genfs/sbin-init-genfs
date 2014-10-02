@@ -1,0 +1,144 @@
+#!/bin/sh
+
+kver="$(uname -r)"
+mydir="$(dirname "$0")"
+
+#- setup
+  PATH=/bin:/sbin:/usr/bin:/usr/sbin
+  mnt=/mnt
+  wait=10
+
+  initprogs=
+  initprogs="$initprogs /etc/preinit"
+  #initprogs="$initprogs /sbin/init"
+
+  fallback_init="/sbin/init"
+
+
+my="- init-generic-fs[$$] -"
+  [ -z "$jffs2_parttype" ] && jffs2_parttype=$jffs2_parttype_def
+  echo foo | awk '{exit 0;}' # init FPU Emulator NOW, less trouble perhaps kernel bug
+
+if [ $$ = 1 ]; then :
+  exec < /dev/console 1> /dev/console 2> /dev/console
+fi
+
+newroot=no
+init() {
+  if [ $$ = 1 ]; then
+    killall watchdog 2> /dev/null || :
+    kill $HOTPLUG_PID 2> /dev/null || :
+    killall hotplug2 2> /dev/null || :
+
+    echo "$my - executing init"
+    for init in $init $fallback_init; do
+      [ -x "${init%% *}" ] || continue
+      echo "$my - $init $*"
+      exec $init "$@"
+    done
+
+# fall through
+    echo "$my - OOPS - executing init failed somehow"
+    ifconfig lo 127.0.0.1 || :
+    ifconfig eth0 192.168.1.1 || :
+    telnetd -l /bin/login.sh &
+    read -t 60 foo
+    exec /bin/sh
+  fi
+}
+trap init EXIT
+
+echo -n "$my hotplug"
+  if [ $$ = 1 ]; then
+    /sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
+    /sbin/kmodloader /etc/modules-boot.d/
+    udevtrigger
+  fi
+
+echo -n "$my wait for usb storage with <device>/rootfs/etc/preinit ."
+  rootfs_found=no
+  dev=
+  sleep=$wait
+  while [ 0 -lt $sleep ]; do
+    read -t 1 skip
+    [ "$skip" = sh ] && exec /bin/sh
+    [ -n "$skip" ] && break
+    echo -n "..$sleep"
+
+# for each device in /proc/partitions not an mtd device
+  devicees_tried=
+  for drive in $(awk '$1 ~ "^[0-9]+$" && $4 !~ "^(mtd|zram)" {print $4}'  /proc/partitions); do
+    [ -b "/dev/$drive" ] || continue
+    case "$devices_tried" in
+      *" $drive" | \
+      *" $drive "* | \
+      "$drive "*  ) continue ;;
+    esac
+
+  # mounting ro
+    devices_tried="$devices_tried $drive"
+    umount "$mnt" 2> /dev/null || :
+    mount -r "/dev/$drive" "$mnt" 2> /dev/null || continue
+
+  # check for a valid init
+    for init in $initprogs; do
+      [ -x "$mnt/rootfs/$init" ] && break
+    done
+  # if init present, we have valid rootfs found. Go ahead
+    if [ -x "$mnt/rootfs/$init" ]; then
+      dev="/dev/$drive" 
+      rootfs_found=yes
+      break
+    else
+      umount "$mnt" || exit
+      continue
+    fi
+
+    done
+    [ "$rootfs_found" = yes ] && break
+    dev=
+    sleep=$(( $sleep -1 ))
+  done
+  echo
+  [ -z "$dev" ] && exit
+  echo "   $dev ($init)"
+
+echo "$my mounting rootfs ... "
+  set -e
+
+  if [ $$ = 1 ]; then
+    killall watchdog 2> /dev/null || :
+    kill $HOTPLUG_PID 2> /dev/null || :
+    k2illall hotplug2 2> /dev/null || :
+  fi
+
+  if btrfs sub li "$mnt/rootfs" > /dev/null 2> /dev/null; then
+    subvol="$(btrfs sub li "$mnt/rootfs" | awk '{ print $NF; exit }')"
+    echo "   btrfs subvolume $subvol"
+    #( set -x
+      umount "$mnt"
+      mount -r -o subvol="$subvol" "$dev" "$mnt"
+    #)
+  else
+    #( set -x
+      mount -o move $mnt /tmp
+      mount -o bind /tmp/rootfs/. $mnt || { umount /tmp; exit 1; }
+      umount /tmp
+    #)
+  fi
+
+  if [ $$ = 1 ]; then
+    [ -d "$mnt" ] || mkdir -p "$mnt"
+    [ -d "$mnt/$mnt" ] || mkdir -p "$mnt/$mnt"
+    [ -x "$mnt/$init" ] || exit
+
+    #echo "+ cd $mnt"
+    cd "$mnt"
+
+    #echo "+ pivot_root . .$mnt"
+    pivot_root . .$mnt
+
+    newroot=yes
+  fi
+
+#-EOF- goto trap EXIT

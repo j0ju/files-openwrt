@@ -1,0 +1,188 @@
+#!/bin/sh
+
+kver="$(uname -r)"
+mydir="$(dirname "$0")"
+
+#- setup
+  PATH=/bin:/sbin:/usr/bin:/usr/sbin
+  mnt=/mnt
+  wait=13
+  jffs2_parttype_def="da"
+#- auto determine endianess and correct jffs2 magic
+  #JFFS2_MAGIC=8519 # little endian
+  #JFFS2_MAGIC=1985 # big endian
+  JFFS2_MAGIC="$(printf '\x19\x85' | hexdump | awk '{ print $NF; exit}')" # auto endianess
+
+  initprogs=
+  initprogs="$initprogs /etc/preinit"
+  initprogs="$initprogs /sbin/init"
+
+  #fallback_init="/bin/busybox init"
+  #fallback_init="/rom/sbin/procd"
+  #fallback_init="/sbin/procd"
+  fallback_init="/sbin/init"
+  #fallback_init="/bin/sh"
+
+  #watchdog=/dev/null
+  watchdog=/dev/watchdog
+
+my="- init-jffs[$$] -"
+  [ -z "$jffs2_parttype" ] && jffs2_parttype=$jffs2_parttype_def
+  echo foo | awk '{exit 0;}' # init FPU Emulator NOW, less trouble perhaps kernel bug
+
+#- debug
+#  insmod() { echo "$@"; }
+
+if [ $$ = 1 ]; then :
+  exec < /dev/console 1> /dev/console 2> /dev/console
+else :
+  # insmod() { echo "# insmod $*"; }
+fi
+
+newroot=no
+init() {
+  if [ $$ = 1 ]; then
+    killall watchdog 2> /dev/null || :
+    kill $HOTPLUG_PID || :
+    killall hotplug2 2> /dev/null || :
+
+    #[ "$newroot" = no ] && initprogs=
+    echo "$my - executing init"
+    for init in $initprogs $fallback_init; do
+      [ -x "${init%% *}" ] || continue
+      case "$init" in
+        *procd )
+          exec 3> "$watchdog" && echo -n V >&3 || ::
+          ;;
+      esac
+      echo "$my - $init $*"
+      exec $init "$@"
+    done
+
+# fall through
+    echo "$my - OOPS - executing init failed somehow"
+    ifconfig lo 127.0.0.1 || :
+    ifconfig eth0 192.168.1.1 || :
+    telnetd -l /bin/login.sh &
+    read -t 60 foo
+    exec /bin/sh
+  fi
+}
+trap init EXIT
+
+echo -n "$my hotplug"
+  if [ $$ = 1 ]; then
+    /sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
+    /sbin/kmodloader /etc/modules-boot.d/
+    udevtrigger
+  fi
+
+echo -n "$my wait for usb storage with jffs2 partition (type 0x$jffs2_parttype) ..."
+  rootfs_found=no
+  dev=
+  sleep=$wait
+  while [ 0 -lt $sleep ]; do
+    echo
+    read -t 1 skip
+    [ "$skip" = sh ] && exec /bin/sh
+    [ -n "$skip" ] && break
+    echo -n "$sleep..."
+    for drive in /dev/sd[a-z]; do
+      [ -b "$drive" ] || continue
+      dd if=$drive bs=1 count=1 1>/dev/null 2>&1 || continue
+
+    # check for partition type
+      dev="$(fdisk -l $drive | grep '^\/dev\/.* '"$jffs2_parttype"' ' | head -n 1 | cut -f1 -d' ')"
+      [ -z "$dev" ] && continue
+
+    # is this a prepared JFFS2 partition
+      if [ $$ = 1 ]; then
+        mtdhead="$(dd if="$dev" bs=2 count=1 2>/dev/null | hexdump -C | head -n 1 | sed -e 's/^[0-9a-f]\+//' -e 's/[^0-9a-z]//g')"
+        [ "$mtdhead" = "$JFFS2_MAGIC" ] || continue
+      fi
+
+      rootfs_found=yes
+      break
+    done
+    [ "$rootfs_found" = yes ] && break
+    dev=
+    sleep=$(( $sleep -1 ))
+  done
+  [ -z "$dev" ] && exit
+  echo " $dev"
+
+echo -n "$my create new mtd block device on $dev ..."
+  escdev="$(echo -n ${dev} | sed 's/\//\\\//g')"
+  #devsize="$(fdisk -l $drive | awk '/^'"$escdev"'/ { print $4; exit 0; } ')"
+  devsize="$(fdisk -l $drive | grep '^'"$escdev"'' | head -n 1 | sed 's/ \+/ /g' | cut -f4 -d' ')"
+  devsize="${devsize%+}"
+
+  local mult=1
+  local blkcount=$(($devsize / 64 / $mult))
+  while [ $blkcount -gt 2047 ]; do
+    mult=$(($mult+$mult))
+    if [ $mult -gt 8 ]; then
+      echo "blockdevice $dev to large." 1>&2
+      exit 1
+    fi
+    blkcount=$(($devsize / 64 / $mult))
+  done
+  blksize=$((64*$mult))
+
+  insmod block2mtd block2mtd=$dev,$(($blksize*1024))
+  mtd="$(awk -F'[ ":]+' '/'"$escdev"'/ { sub("^mtd", "/dev/mtdblock", $1); print $1; exit 0 }' /proc/mtd)"
+
+  if [ -z "$mtd" ]; then
+    echo "$my mtd device has been not created." 1>&2
+    exit 1
+  fi
+  dev=$mtd
+  echo " $dev"
+
+echo -n "$my wait for device.."
+  sleep=$wait
+  while [ 0 -lt $sleep ]; do
+    echo
+    read -t 1 skip
+    [ "$skip" = sh ] && exec /bin/sh
+    [ -b "$dev" ] && break
+    sleep=$(( $sleep -1 ))
+  done
+  if [ -b "$dev" ]; then
+    echo " found"
+  else
+    echo " NOT found"
+    exit
+  fi
+
+echo "$my mounting new jffs2 filesystem ... "
+  if [ $$ = 1 ]; then
+    killall watchdog 2> /dev/null || :
+    kill $HOTPLUG_PID || :
+    killall hotplug2 2> /dev/null || :
+
+    [ -d "$mnt" ] || mkdir -p "$mnt" "./$mnt"
+    set -e
+    echo "PWD = $PWD"
+
+    ( set -x
+      mount -o ro,noatime,nodiratime -t jffs2 $dev $mnt
+    )
+
+    echo "+ cd $mnt"
+    cd "$mnt"
+
+    echo "PWD = $PWD"
+    [ -d "./$mnt" ] || mkdir -p "./$mnt"
+
+    echo "+ pivot_root . .$mnt"
+    pivot_root . .$mnt
+
+    newroot=yes
+  else
+    echo "# mount -o noatime,nodiratime -t jffs2 '$dev' '$mnt' -r"
+    echo
+  fi
+
+#-EOF- goto trap EXIT
+
