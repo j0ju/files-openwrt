@@ -10,7 +10,6 @@
   RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
   RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
 
-iproxd
 #- set default root passwort to root, if empty and set root to /tmp
   if grep ^root:: /etc/shadow > /dev/null; then
     echo root:root | chpasswd && /etc/init.d/telnet stop > /dev/null 2>&1
@@ -35,6 +34,8 @@ iproxd
 #- uci modifications
   #- disable wifi
     uci set wireless.radio0.disabled=1
+    #uci set wireless.radio0.country=DE
+    uci set wireless.radio0.country=JP
   #- disable atm
     #uci set network.atm.auto=0
     uci delete network.atm
