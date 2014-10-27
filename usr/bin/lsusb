@@ -11,6 +11,8 @@ for d in /sys/bus/usb/devices/*; do
         has_subdevs=no
         for sub in "$d"/*/driver; do
                 [ -d "$sub" ] || continue
+                dev="${sub%/driver}"
+                dev="${dev##*/}"
                 has_subdevs=yes
                 driver="$(ls -ld "$sub")"
                 driver="${driver##*/}"
