@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+
+START=19
+USE_PROCD= # 0
+
+restart() {
+  start
+}
+
+start() {
+  cd /etc/pf6
+  exec ./pf6 start
+}
+
+stop() {
+  cd /etc/pf6
+  exec ./pf6 stop
+}
+
+EXTRA_HELP="	load	alias for start
+	status	shows current rules
+	stat	alias for status
+"
+
+EXTRA_COMMANDS="load status stat"
+
+load() { start; }
+status() { ip6tables-save; }
+stat() { status; }
+

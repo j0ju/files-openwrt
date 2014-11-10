@@ -11,7 +11,7 @@ for table in $tables; do
 	
 	echo -n "$table "
 
-	ip6tables="iptables -t ${table}"
+	iptables="ip6tables -t ${table}"
 
 	$iptables -F 
 	$iptables -X
