@@ -1,0 +1,13 @@
+# /etc/firewall.user
+# This file is interpreted as shell script.
+# Put your custom iptables rules here, they will
+# be executed with each firewall (re-)start.
+
+# Internal uci firewall chains are flushed and recreated on reload, so
+# put custom rules into the root chains e.g. INPUT or FORWARD or into the
+# special user chains, e.g. input_wan_rule or postrouting_lan_rule.
+
+# remove comments from rules, use dd as buffer
+#iptables-save  | dd bs=256k 2> /dev/null | sed -e 's/-m comment --comment "\?[^"]\+"\? -j/-j/'  | iptables-restore
+#ip6tables-save | dd bs=256k 2> /dev/null | sed -e 's/-m comment --comment "\?[^"]\+"\? -j/-j/' | ip6tables-restore
+

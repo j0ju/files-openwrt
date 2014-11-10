@@ -2,13 +2,15 @@
 
 #- tcp UNICAST
 -p tcp -j REJECT --reject-with icmp-admin-prohibited
+# ALT: --reject-with icmp-port-unreachable
 
 #- 1st udp BROADCAST / MULTICAST DROP
 -m addrtype --dst-type BROADCAST -p udp -j DROP
 -m addrtype --dst-type MULTICAST -p udp -j DROP
 
 #- 2nd udp UNICAST
--p udp -m limit --limit 1/s -j REJECT --reject-with icmp-port-unreachable
+-p udp -m limit --limit 3/s -j REJECT --reject-with icmp-admin-prohibited
+# ALT: --reject-with icmp-port-unreachable
 -p udp -j DROP
 
 # any other traffic is dropped
