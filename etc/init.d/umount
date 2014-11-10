@@ -7,48 +7,48 @@ SHUTDOWN_PROGS=
 STOP=99
 
 stop() {
-	trap "echo SIGINT " INT
-	trap "echo SIGQUIT" QUIT
-	trap "echo SIGTERM" TERM
+  trap "echo SIGINT " INT
+  trap "echo SIGQUIT" QUIT
+  trap "echo SIGTERM" TERM
 
-	[ -n "$SHUTDOWN_PROGS" ] && for prog in $SHUTDOWN_PROGS; do
-		killall -q "$prog"
-	done
+  [ -n "$SHUTDOWN_PROGS" ] && for prog in $SHUTDOWN_PROGS; do
+    killall -q "$prog"
+  done
 
-	sync
-	sleep 3
+  sync
+  sleep 3
 
-	tac () {
-		local _line
-		while read -r _line ; do
-			tac
-			echo "$_line"
-			break
-		done
-	}
+  tac () {
+    local _line
+    while read -r _line ; do
+      tac
+      echo "$_line"
+      break
+    done
+  }
 
-	sync
+  sync
 
-	tac < /proc/mounts | \
-	while read dev mntpnt type opts; do
+  tac < /proc/mounts | \
+  while read dev mntpnt type opts; do
     [ "$mntpnt" = /proc ] && continue
-	  ( set -x
-		  umount -n -f "$mntpnt" || mount  -n -o remount,ro "$mntpnt"
-		)
-	done
-	echo
+    ( set -x
+      umount -n -f "$mntpnt" || mount  -n -o remount,ro "$mntpnt"
+    )
+  done
+  echo
 
-	cat /proc/mounts
-	sync
+  cat /proc/mounts
+  sync
 
-	if [ -f /proc/sysrq-trigger ]; then
-		echo sync > /proc/sysrq-trigger
-		sleep 3
-		echo umount > /proc/sysrq-trigger
+  if [ -f /proc/sysrq-trigger ]; then
+    echo sync > /proc/sysrq-trigger
+    sleep 3
+    echo umount > /proc/sysrq-trigger
   fi
-	sleep 3
+  sleep 3
 
-	echo
-	echo "Ready to shutdown system..."
+  echo
+  echo "Ready to shutdown system..."
 }
 
