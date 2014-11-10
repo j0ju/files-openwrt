@@ -5,8 +5,8 @@
   DEFAULT_TZ="CET-1CEST,M3.5.0,M10.5.0/3"
 
   RC_TO_DISABLE=
-  #RC_TO_DISABLE="$RC_TO_DISABLE qos"
-  #RC_TO_DISABLE="$RC_TO_DISABLE firewall"
+  RC_TO_DISABLE="$RC_TO_DISABLE qos"
+  RC_TO_DISABLE="$RC_TO_DISABLE firewall"
   RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
   RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
 
@@ -35,10 +35,10 @@
   #- disable wifi
     uci set wireless.radio0.disabled=1
     #uci set wireless.radio0.country=DE
-    uci set wireless.radio0.country=JP
+    #uci set wireless.radio0.country=JP
   #- disable atm
-    #uci set network.atm.auto=0
-    uci delete network.atm
+    uci set network.atm.auto=0
+    #uci delete network.atm
   #- set correct ANNEX
     uci set network.dsl.annex=b
     uci set network.dsl.tone=bv
