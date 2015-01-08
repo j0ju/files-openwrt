@@ -1,0 +1,8 @@
+#- ssh
+-p tcp --dport 22 -j ACCEPT
+
+#- POLICY: log & reject filtered
+-j log_reject_filtered
+#-j log_reject
+#-j reject
+

@@ -1,0 +1,8 @@
+# accept ICMP6s essential for forwarded IPv6
+-p ipv6-icmp -m icmp6 --icmpv6-type echo-request            -m limit --limit 1000/sec -j ACCEPT
+-p ipv6-icmp -m icmp6 --icmpv6-type echo-reply              -m limit --limit 1000/sec -j ACCEPT
+-p ipv6-icmp -m icmp6 --icmpv6-type destination-unreachable -m limit --limit 1000/sec -j ACCEPT
+-p ipv6-icmp -m icmp6 --icmpv6-type packet-too-big          -m limit --limit 1000/sec -j ACCEPT
+-p ipv6-icmp -m icmp6 --icmpv6-type time-exceeded           -m limit --limit 1000/sec -j ACCEPT
+-p ipv6-icmp -m icmp6 --icmpv6-type bad-header              -m limit --limit 1000/sec -j ACCEPT
+-p ipv6-icmp -m icmp6 --icmpv6-type unknown-header-type     -m limit --limit 1000/sec -j ACCEPT

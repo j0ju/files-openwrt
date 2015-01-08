@@ -1,6 +1,12 @@
 #- stateful
--m state --state ESTABLISHED,RELATED -j ACCEPT
+-m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 
-#- rest verwerfen
--j log_reject
+#- network matrix
+-i br-lan -j forward_lan
+
+# POLICY - log everything, but (place your filter here)
+-j log_reject_filtered
+# POLICY - log everything
+#-j log_reject
+#- POLICY
 -j reject

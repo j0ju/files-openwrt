@@ -1,5 +1,8 @@
 #- stateful
--m state --state ESTABLISHED,RELATED -j ACCEPT
+-m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+#- network matrix
+-i br-lan -j forward_lan
 
 #- rest verwerfen
 -j log_reject

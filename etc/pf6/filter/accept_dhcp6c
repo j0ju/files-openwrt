@@ -1,0 +1,2 @@
+# needed to allow to be configured by DHCPv6
+-s fe80::/10 -d fe80::/10 -p udp -m udp --sport 547 --dport 546 -j ACCEPT

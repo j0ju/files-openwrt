@@ -1,4 +1,8 @@
 # nat/POSTROUTING
 
 # masquerading for the lazy
-! -o lo -j MASQUERADE
+#! -o lo -j MASQUERADE
+
+# masquerading for some default interface names
+-o ppp-wan -j MASQUERADE
+-o br-wan -j MASQUERADE

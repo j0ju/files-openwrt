@@ -1,0 +1,12 @@
+#- allow local multicast
+-j accept_icmp6_multicast
+
+#- ssh
+-p tcp --dport 22 -j ACCEPT
+
+#- POLICY: log & reject filtered
+-j log_reject_filtered
+
+#-j log_reject
+#-j reject
+
