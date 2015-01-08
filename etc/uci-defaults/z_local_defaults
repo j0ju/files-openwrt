@@ -31,6 +31,11 @@
     fi
   done
 
+#- prevent firmwares accidentally opened RW and polluting flash
+#  find /lib/firmware ! -type l -type f | while read f; do
+#    ln -sf "/rom$f" "$f"
+#  done
+
 #- uci modifications
   #- disable wifi
     uci set wireless.radio0.disabled=1
