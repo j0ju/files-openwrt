@@ -1,0 +1,16 @@
+# should be terminating
+*filter
+:reject - [0:0]
+
+-A reject -p tcp -j REJECT --reject-with admin-prohib
+
+# a reject to multicast/boradcast is nonsense
+-A reject -m addrtype --dst-type BROADCAST -p udp -j DROP
+-A reject -m addrtype --dst-type MULTICAST -p udp -j DROP
+
+# limit the responses to UDP unicast
+-A reject -p udp -m limit --limit 2/s -j REJECT --reject-with admin-prohib
+-A reject -p udp -j DROP
+
+-A reject -j DROP
+COMMIT
