@@ -4,5 +4,8 @@
 #- user config files for root in temp legen
   cp -a /root/.[a-z]* /tmp
 
+#- resize tmp
+  /usr/local/sbin/tmp-resize 6144
+
 # end
 exit 0
