@@ -1,0 +1,12 @@
+# should be terminating
+*filter
+:reject - [0:0]
+
+# a REJECT to multicast is nonsense
+-A reject -p udp -d ff00::/8 -j DROP
+
+-A reject -p tcp -j REJECT --reject-with adm-prohibited
+-A reject -p udp -m limit --limit 2/s -j REJECT --reject-with adm-prohibited
+-A reject -p udp -j DROP
+-A reject -j DROP
+COMMIT

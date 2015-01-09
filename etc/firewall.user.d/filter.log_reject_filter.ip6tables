@@ -1,0 +1,15 @@
+# for matched packets to be logged just fall through
+# otherwise jump directly to "reject" -j reject
+*filter
+:log_reject_filter - [0:0]
+
+# ignore ALL multicast
+#-A log_reject_filter -p udp -d ff00::/8 -j reject
+
+# ignore SMB
+-A log_reject_filter -p udp --sport 137:138 --dport 137:138 -j reject
+
+# ignore chatty canon printers
+-A log_reject_filter -p udp --sport 8612 --dport 8612 -j reject
+
+COMMIT

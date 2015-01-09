@@ -1,0 +1,18 @@
+# for matched packets to be logged just fall through
+# otherwise jump directly to "reject" -j reject
+*filter
+:log_reject_filter - [0:0]
+
+#- ignore IGMP
+-A log_reject_filter -p 2 -d 224.0.0.1 -j reject
+
+#- ignore samba boradcasts
+-A log_reject_filter -p udp --sport 137:138 --dport 137:138 -j reject
+
+#- ignore chatty canon printer driver
+-A log_reject_filter -p udp --sport 8612 --dport 8612 -j reject
+#- ignore chatty epson printer driver
+-A log_reject_filter -p udp --dport 3289 -j reject
+-A log_reject_filter -p udp --dport 1124 -j reject
+
+COMMIT
