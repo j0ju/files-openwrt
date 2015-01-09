@@ -76,9 +76,9 @@
     CSRRST='\[\e[u\]'     # Restore CSR Pos
     CSRHOME='\[\e[1;1H\]'   # Set CSRPOS x/y=1/1
 
-    CSR_PS1_UPRIGHT="$(stty -a | tr ';' '\n' | awk '/col/ {print $2}')"
-    #CSR_PS1='\[\e[1;'"$(($CSR_PS1_UPRIGHT - 20))"'H\]'   # Set CSRPOS x/y=_CSR_PS1_UPRIGHT-20/1
-    CSR_PS1='\[\e[1;'"$((($CSR_PS1_UPRIGHT - 30)/2))"'H\]'   # Set ca center CSRPOS
+    CSR_PS1_UPRIGHT=80
+    [ -x /bin/stty ] && CSR_PS1_UPRIGHT="$(stty -a | tr ';' '\n' | awk '/col/ {print $2}')"
+    CSR_PS1='\[\e[1;'"$((($CSR_PS1_UPRIGHT - 30)/2))"'H\]'   # Set approx. centered
 
     PS1_NONPRINT_BEGIN='\['
     PS1_NONPRINT_END='\]'
