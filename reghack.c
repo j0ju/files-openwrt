@@ -137,7 +137,7 @@ static const struct search_regdomain search_regdomains[] = {
   /* DE */
 	{
 		.desc = "embedded DE regdomain in cfg80211/regdb.o",
-		.reg  = REG_MATCH("DE", 5, NL80211_DFS_ETSI, REG_RULE(2400, 2483.5, 40, 0, 20, 0))
+		.reg  = REG_MATCH("DE", 5, NL80211_DFS_ETSI, REG_RULE(2400, 2483, 40, 0, 20, 0))
 	},
 
 	/* ath.ko matches */
