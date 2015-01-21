@@ -6,7 +6,7 @@ mydir="$(dirname "$0")"
 #- setup
   PATH=/bin:/sbin:/usr/bin:/usr/sbin
   mnt=/mnt
-  wait=10
+  wait=5
 
   initprogs=
   initprogs="$initprogs /etc/preinit"
@@ -14,10 +14,9 @@ mydir="$(dirname "$0")"
 
   fallback_init="/sbin/init"
 
+  FS_OPTS_btrfs=relatime,compress=lzo
 
 my="- init-generic-fs[$$] -"
-  [ -z "$jffs2_parttype" ] && jffs2_parttype=$jffs2_parttype_def
-  echo foo | awk '{exit 0;}' # init FPU Emulator NOW, less trouble perhaps kernel bug
 
 if [ $$ = 1 ]; then :
   exec < /dev/console 1> /dev/console 2> /dev/console
@@ -51,7 +50,7 @@ trap init EXIT
 echo -n "$my hotplug"
   if [ $$ = 1 ]; then
     /sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
-    /sbin/kmodloader /etc/modules-boot.d/
+    #/sbin/kmodloader /etc/modules-boot.d/
     udevtrigger
   fi
 
@@ -117,7 +116,8 @@ echo "$my mounting rootfs ... "
     echo "   btrfs subvolume $subvol"
     #( set -x
       umount "$mnt"
-      mount -r -o subvol="$subvol" "$dev" "$mnt"
+      FS_OPTS="${FS_OPTS_btrfs:+$FS_OPTS_btrfs,}subvol=$subvol"
+      mount -r ${FS_OPTS:+-o $FS_OPTS} "$dev" "$mnt"
     #)
   else
     #( set -x
