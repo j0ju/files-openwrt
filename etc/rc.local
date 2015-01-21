@@ -5,7 +5,7 @@
   cp -a /root/.[a-z]* /tmp
 
 #- resize tmp
-  /usr/local/sbin/tmp-resize 6144
+  /usr/local/sbin/tmp-resize 10240
 
 # end
 exit 0
