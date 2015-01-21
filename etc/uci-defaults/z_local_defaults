@@ -9,6 +9,8 @@
   RC_TO_DISABLE="$RC_TO_DISABLE firewall"
   RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
   RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
+  RC_TO_DISABLE="$RC_TO_DISABLE fastd"
+  RC_TO_DISABLE="$RC_TO_DISABLE telnet"
 
 #- set default root passwort to root, if empty and set root to /tmp
   if grep ^root:: /etc/shadow > /dev/null; then
@@ -30,6 +32,7 @@
       /etc/init.d/$_rc disable || :
     fi
   done
+  rm -f /init
 
 #- prevent firmwares accidentally opened RW and polluting flash
 #  find /lib/firmware ! -type l -type f | while read f; do
