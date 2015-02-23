@@ -1,0 +1,54 @@
+#!/bin/sh
+
+PORTS=
+DEFAULT_PORT="53"
+INTERFACE=br-lan
+PROGNAME="$0"
+FILTER=""
+
+arg_parse() {
+        local count=0
+        while [ $count -lt $# ]; do
+                case "$1" in
+                        -i ) INTERFACE="$2"; shift ;;
+                        -p ) PORTS="$PORTS $2"; shift ;;
+                        -h | --help ) usage; exit 1 ;;
+                        * ) FILTER="$FILTER $1" ;;
+                esac
+                shift
+        done
+        [ -z "$PORTS" ] && PORTS="$DEFAULT_PORT"
+}
+
+usage() {
+cat << EOF
+        $PROGNAME [-i IF] [-p PORT] <option. BPF>
+EOF
+}
+
+netgrep() {
+        echo "INTERFACE=$INTERFACE" >&2
+
+        build_bpf
+
+        OPTS=
+        OPTS="$OPTS -i $INTERFACE"
+        tcpdump -n $OPTS "$BPF" ${FILTER:+ and $FILTER}
+}
+
+build_bpf() {
+        BPF=
+
+        BPF="$BPF ("
+        local p
+        for p in $PORTS; do
+                BPF="$BPF dst port $p or"
+        done
+        BPF="${BPF% or} )"
+        echo "PORTS=$PORTS" >&2
+}
+
+arg_parse "$@"
+
+#set -x
+netgrep $FILTER
