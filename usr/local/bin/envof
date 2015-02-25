@@ -1,12 +1,17 @@
 #!/bin/sh
 
+set -x
 while [ "$*" ]; do
 	cmd="$1"
 	for pid in $(pgrep "$cmd") ""; do
 		[ -z "$pid" ] && continue
 		[ "$pid" = "$$" ] && continue
 		[ -r /proc/$pid/cmdline ] || continue
-		echo "$(tr '\000' '\n' < /proc/$pid/environ)" | sed "s/^/$cmd[$pid]: /"
+		[ -r /proc/$pid/environ ] || continue
+		< /proc/$pid/cmdline tr '\000' '\n' | {
+        read cmd _tmp
+        tr '\000' '\n' < /proc/$pid/environ | sed "s@^@$cmd[$pid]: @"
+      }
 	done
 	shift
 done

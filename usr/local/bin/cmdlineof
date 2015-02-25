@@ -6,7 +6,7 @@ while [ "$*" ]; do
 		[ -z "$pid" ] && continue
 		[ "$pid" = "$$" ] && continue
 		[ -r /proc/$pid/cmdline ] || continue
-		echo "$cmd[$pid]:	$(tr '\000' ' ' < /proc/$pid/cmdline)"
+		tr '\000' ' ' < /proc/$pid/cmdline | awk '{print $1"['"$pid"']: "$0}'
 	done
 	shift
 done
