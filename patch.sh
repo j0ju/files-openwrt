@@ -32,7 +32,7 @@ rm -f \
   "$BASEDIR"/etc/rc.d/[SK]??pf6 \
 #}
 #{ create SuSe like rc$SCRIPT links to init scripts
-__PREFIX__="$BASEDIR" "$BASEDIR/usr/local/sbin/update-rc"
+__PREFIX__="$BASEDIR" "$BASEDIR/usr/local/bin/update-rc"
 #}
 #{ ignore block sizes try to squeeze more out of some file larger than
 MAX_SIZE=150K
