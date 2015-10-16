@@ -13,6 +13,8 @@ set ai
 set modeline
 set modelines=5
 
+syn off
+
 "#set dir=/tmp
 set dir=/var/cache/vim/swap
 

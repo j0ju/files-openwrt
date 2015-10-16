@@ -10,6 +10,7 @@
 
 	[ -d /opt/bin ] &&  PATH="$PATH:/opt/bin"
 	[ -d /opt/sbin ] && PATH="$PATH:/opt/sbin"
+	umask 0022
 # }}}
 #- some info about the host system {{{
 	hostinfo() {
@@ -25,12 +26,12 @@
 	alias more=less
 	export PAGER=less
 
-	if which vim 2> /dev/null 1>&2 ; then
+	if which vim 2> /dev/null 1>&2 && [ "$(tty)" != /dev/ttyS0 ]; then
 		alias vi=vim
 		export EDITOR=vim
 		export VISUAL=vim
 	else
-		 alias vim=vi && alias vi=vim
+		alias vi="busybox vi"
 	fi
 # }}}
 #- system tools # {{{
@@ -38,10 +39,12 @@
 	[ -z /bin/ldd ] || ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }
 # }}}
 #- user convinience for RO/RW /-filesystem # {{{
-	_rootfs_mode="$(awk -F '[ ,]' '/^\/dev\/[0-9a-z]+ \/ [0-9a-z]+/ {print toupper($4)}' /proc/mounts)"
-	[ "$_rootfs_mode" = RW ] && PS1="[$_rootfs_mode] $PS1"
-	alias RO="root-ro; relogin #"
-	alias RW="root-rw; relogin #"
+	#_rootfs_mode="$(awk -F '[ ,]' '/^\/dev\/[0-9a-z]+ \/ [0-9a-z]+/ {print toupper($4)}' /proc/mounts)"
+	#[ "$_rootfs_mode" = RW ] && PS1="[$_rootfs_mode] $PS1"
+	#alias RO="root-ro; relogin #"
+	#alias RW="root-rw; relogin #"
+	#alias RO="echo RO disabled #"
+	#alias RW="echo RW disabled #"
 # }}}
 #- enhanced prompt # {{{
     TXTBLK='\[\e[30m\]' # Black
@@ -108,6 +111,13 @@
 	alias rL="relogin #"
 
 	_CLEANUP_log() { [ -n "$_LOGREAD_PID" ] && { kill "$_LOGREAD_PID" 2>/dev/null 1>&2; }; }
+	#__log_filter() {
+	#  exec sed \
+	#    -e "/entered (forwarding|disabled) state$/d" \
+	#	-e "/netifd: Network device '[^']+' link is (down|up)$/d" \
+	#	-e "/netifd: VLAN '[^']+' link is (down|up)$/d"
+	#}
+	#alias log='_CLEANUP_log; logread -f | __log_filter & _LOGREAD_PID=$!; logread | __log_filter #'
 	alias log='_CLEANUP_log; logread -f & _LOGREAD_PID=$!; logread #'
 	_CLEANUP_PROCS="$_CLEANUP_PROCS _CLEANUP_log"
 
@@ -117,7 +127,11 @@
 		sh -x "$sh" "$@"
 	}
 
-	[ -x /usr/bin/ps ] && alias ps=/usr/bin/ps
+	if [ -x /usr/bin/ps ]; then
+		alias ps=/usr/bin/ps
+	else
+		: # alias ps="(ps w)"
+	fi
 
 	alias l="ls -la"
 	alias j=jobs
@@ -126,25 +140,18 @@
 	#alias halt="echo '# /sbin/halt ?' #"
 
 	_IFSTAT_BIN="$(which ifstat)" # /opt/bin/ifstat
-    _IFSTAT_ITF=
-    _IFSTAT_ITF="$_IFSTAT_ITF br-lan"
-    _IFSTAT_ITF="$_IFSTAT_ITF eth0"
-    _IFSTAT_ITF="$_IFSTAT_ITF wlan0"
-    _IFSTAT_ITF="$_IFSTAT_ITF br-wan"
-    _IFSTAT_ITF="$_IFSTAT_ITF nas0"
-    _IFSTAT_ITF="$_IFSTAT_ITF ptm0"
-    _IFSTAT_ITF="$_IFSTAT_ITF ptm0.7"
-    _IFSTAT_ITF="$_IFSTAT_ITF pppoe-wan"
-    ifstat() {
-        if [ -n "$*" -o -z "$_IFSTAT_ITF" ]; then
-            "$_IFSTAT_BIN" "$@"
-        else
-            local itf=; for i in $_IFSTAT_ITF; do
-                [ -d /sys/class/net/$i ] && itf="$itf -i $i"
-            done
-            "$_IFSTAT_BIN" $itf 2
-        fi
-    }
+	_IFSTAT_ITF=
+	_IFSTAT_ITF="$_IFSTAT_ITF eth0"
+	ifstat() {
+		if [ -n "$*" -o -z "$_IFSTAT_ITF" ]; then
+			"$_IFSTAT_BIN" "$@"
+		else
+			local itf=; for i in $_IFSTAT_ITF; do
+				[ -d /sys/class/net/$i ] && itf="$itf -i $i"
+			done
+			"$_IFSTAT_BIN" $itf 2
+		fi
+	}
 
 	if [ -z "$STY" -a -z "$TMUX" ]; then
         if which tx > /dev/null && which tmux > /dev/null; then

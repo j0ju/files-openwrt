@@ -49,8 +49,9 @@ trap init EXIT
 
 echo -n "$my hotplug"
   if [ $$ = 1 ]; then
-    /sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
-    #/sbin/kmodloader /etc/modules-boot.d/
+    #/sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
+    /lib/procd -h /etc/hotplug.json & HOTPLUG_PID=$!
+    /sbin/kmodloader /etc/modules-boot.d/
     udevtrigger
   fi
 
@@ -108,12 +109,12 @@ echo "$my mounting rootfs ... "
   if [ $$ = 1 ]; then
     killall watchdog 2> /dev/null || :
     kill $HOTPLUG_PID 2> /dev/null || :
-    k2illall hotplug2 2> /dev/null || :
+    killall hotplug2 2> /dev/null || :
   fi
 
-  if btrfs sub li "$mnt/rootfs" > /dev/null 2> /dev/null; then
-    subvol="$(btrfs sub li "$mnt/rootfs" | awk '{ print $NF; exit }')"
-    echo "   btrfs subvolume $subvol"
+  if btrfs sub show "$mnt/rootfs/." > /dev/null 2> /dev/null; then
+    subvol="$(btrfs sub show "$mnt/rootfs/." | awk '$1 == "Name:" {print $2; exit }' )"
+    echo "   btrfs sub show $dev:/rootfs => $subvol"
     #( set -x
       umount "$mnt"
       FS_OPTS="${FS_OPTS_btrfs:+$FS_OPTS_btrfs,}subvol=$subvol"
@@ -127,6 +128,7 @@ echo "$my mounting rootfs ... "
     #)
   fi
 
+  #set -x
   if [ $$ = 1 ]; then
     [ -d "$mnt" ] || mkdir -p "$mnt"
     [ -d "$mnt/$mnt" ] || mkdir -p "$mnt/$mnt"

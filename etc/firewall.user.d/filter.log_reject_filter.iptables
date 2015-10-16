@@ -7,12 +7,12 @@
 -A log_reject_filter -p 2 -d 224.0.0.1 -j reject
 
 #- ignore samba boradcasts
--A log_reject_filter -p udp --sport 137:138 --dport 137:138 -j reject
+-A log_reject_filter -p udp --dport 137:138 -j reject
 
-#- ignore chatty canon printer driver
--A log_reject_filter -p udp --sport 8612 --dport 8612 -j reject
-#- ignore chatty epson printer driver
--A log_reject_filter -p udp --dport 3289 -j reject
--A log_reject_filter -p udp --dport 1124 -j reject
+#- ignore chatty canon printer drivers
+-A log_reject_filter -p udp --dport 8612 -j reject
+
+#- ignore broadcasts
+-A log_reject_filter -p udp -m addrtype --dst-type BROADCAST -j reject
 
 COMMIT

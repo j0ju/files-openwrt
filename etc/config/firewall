@@ -1,0 +1,179 @@
+# OpenWrt fw3 - firewall Config see http://wiki.openwrt.org/doc/uci
+# vim: foldmethod=marker foldmarker=config,#} ts=4 sw=4 expandtab foldminlines=2
+
+config defaults
+    option syn_flood    1
+    option input        REJECT
+    option output       ACCEPT
+    option forward      REJECT
+#}
+
+config zone # lan
+    option name         lan
+    list   network      'lan'
+    option input        REJECT
+    option output       ACCEPT
+    option forward      ACCEPT
+    option log      1
+#}
+config zone # wan
+    option name     wan
+    list   network      'wan'
+    list   network      'wan6'
+    option input        REJECT
+    option output       ACCEPT
+    option forward      REJECT
+    option masq     1
+    option mtu_fix      1
+#}
+
+config forwarding # lan -> wan
+    option src      lan
+    option dest     wan
+#}
+
+config rule # wan drop rc1918 traffic 
+    option name     WAN-drop-RFC1918
+    option src      lan
+    option dest     wan
+    list   dest_ip  10.0.0.0/8
+    list   dest_ip  172.16.0.0/12
+    list   dest_ip  192.168.0.0/16
+    list   proto    any
+    option family   ipv4
+    option target   REJECT
+#}
+
+config rule # Allow DNS - lan
+    option name     lan-DNS-tcp
+    option src      lan
+    option proto        tcp
+    option dest_port    53
+    option target       ACCEPT
+config rule
+    option name     lan-DNS-udp
+    option src      lan
+    option proto        udp
+    option dest_port    53
+    option target       ACCEPT
+#} #}
+
+config rule # Allow DHCP - lan
+    option name     lan-DHCP
+    option src      lan
+    option proto        udp
+    option dest_port    67
+    option src_port     68
+    option family       ipv4
+    option target       ACCEPT
+#}
+config rule # Allow TFTP - lan
+    option name     lan-TFTP
+    option src      lan
+    option proto        udp
+    option dest_port    69
+    option family       ipv4
+    option target       ACCEPT
+#}
+config rule # Allow DHCPv6 - lan
+    option name     lan-DHCPv6
+    option src      lan
+    option proto        udp
+    option src_ip       fe80::/10
+    option src_port     546
+    option dest_ip      ff00::/8
+    option dest_port    547
+    option family       ipv6
+    option target       ACCEPT
+#}
+
+config rule # Allow IPv4 ping - lan
+    option name     lan-PING
+    option src      lan
+    option proto        icmp
+    option icmp_type    echo-request
+    option family       ipv4
+    option target       ACCEPT
+#}
+
+config rule # Allow DHCPv6 replies/results - wan
+    option name     wan-DHCPv6
+    option src      wan
+    option proto        udp
+    option src_ip       fe80::/10
+    option src_port     547
+    option dest_ip      fe80::/10
+    option dest_port    546
+    option family       ipv6
+    option target       ACCEPT
+#}
+config rule # Allow essential incoming IPv6 ICMP traffic - wan
+    option name     Allow-ICMPv6-Input
+    option src      wan
+    option proto    icmp
+    list icmp_type      echo-request
+    list icmp_type      echo-reply
+    list icmp_type      destination-unreachable
+    list icmp_type      packet-too-big
+    list icmp_type      time-exceeded
+    list icmp_type      bad-header
+    list icmp_type      unknown-header-type
+    list icmp_type      router-solicitation
+    list icmp_type      neighbour-solicitation
+    list icmp_type      router-advertisement
+    list icmp_type      neighbour-advertisement
+    option limit        1000/sec
+    option family       ipv6
+    option target       ACCEPT
+#}
+
+config rule # Allow essential forwarded IPv6 ICMP traffic - lan
+    option name     Allow-ICMPv6-Forward
+    option src      lan
+    option dest     *
+    option proto        icmp
+    list icmp_type      echo-request
+    list icmp_type      echo-reply
+    list icmp_type      destination-unreachable
+    list icmp_type      packet-too-big
+    list icmp_type      time-exceeded
+    list icmp_type      bad-header
+    list icmp_type      unknown-header-type
+    option limit        1000/sec
+    option family       ipv6
+    option target       ACCEPT
+#}
+config rule # Allow Multicast - lan
+    option name     Allow-ICMP-Multicast-LAN
+    option src      lan
+    option proto        icmp
+    list icmp_type      130/0
+    list icmp_type      133/0
+    list icmp_type      134/0
+    list icmp_type      135/0
+    list icmp_type      136/0
+    option family       ipv6
+    option target       ACCEPT
+#}
+
+config rule # Allow lan SSH - lan
+    option name     lan-SSH
+    option src      lan
+    option proto        tcp
+    option dest_port    22
+    option target       ACCEPT
+#}
+config rule # HTTP WWW - lan
+    option name     lan-HTTP
+    option src      lan
+    option proto        tcp
+    option dest_port    80
+    option target       ACCEPT
+#}
+
+config include # include a file with users custom iptables rules
+    option path   /etc/firewall.user
+    option family any
+    option reload 1
+#}
+

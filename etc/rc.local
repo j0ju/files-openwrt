@@ -3,9 +3,38 @@
 
 #- user config files for root in temp legen
   cp -a /root/.[a-z]* /tmp
+  
+#- remount /rom RO
+  mount -o remount -r /rom
+
+#- umount debugfs
+  umount /sys/kernel/debug
+
+#- create certain dirs
+  mkdir -p \
+    /var/cache/vim/swap \
+    #
+
+#- add opkg list symlinks
+  [ -d /usr/lib/opkg/lists ] || mkdir -p /usr/lib/opkg/lists
+  mkdir -p /var/cache/opkg
+  rm -rf /var/cache/opkg/lists
+  ln -s /usr/lib/opkg/lists /var/cache/opkg/lists
+
+#- blackhole multicast and RFC1918 with no more specific prefixes
+  ip route add blackhole 224.0.0.0/12 2> /dev/null
+  ip route add blackhole 192.168.0.0/16 2> /dev/null
+  ip route add blackhole 172.16.0.0/12 2> /dev/null
+  ip route add blackhole 10.0.0.0/8 2> /dev/null
+
+#- cleanup /tmp
+  rmdir \
+    /tmp/extroot \
+    /tmp/overlay \
+  2> /dev/null # eo RMDIR
 
 #- resize tmp
-  /usr/local/sbin/tmp-resize 10240
+  /usr/local/sbin/tmp-resize 32768 1> /dev/null
 
 # end
 exit 0

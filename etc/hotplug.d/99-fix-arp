@@ -1,0 +1,19 @@
+#!/bin/sh
+
+if tty > /dev/null; then
+  HOTPLUG_TYPE=iface
+  ACTION=ifup
+fi
+
+case "$HOTPLUG_TYPE:$ACTION" in
+  iface:ifup | net:add )
+  
+    for itf in /sys/class/net/*; do 
+	  [ -d "$itf" ] || continue 
+      itf="${itf##*/}"
+      echo 1 > "/proc/sys/net/ipv4/conf/${itf}/arp_ignore"
+      echo 2 > "/proc/sys/net/ipv4/conf/${itf}/arp_announce"
+    done
+  ;;
+esac
+
