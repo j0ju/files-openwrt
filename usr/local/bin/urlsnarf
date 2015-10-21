@@ -1,0 +1,86 @@
+#!/bin/sh
+
+
+PORTS=
+DEFAULT_PORT="80"
+INTERFACE=eth0
+HOST=
+RESET=
+PROGNAME="$0"
+
+arg_parse() {
+        local count=0
+        while [ $count -lt $# ]; do
+                case "$1" in
+                        -i ) INTERFACE="$2"; shift ;;
+                        -p ) PORTS="$PORTS $2"; shift ;;
+                        -H | --host ) HOST="$2" ;;
+                        #--reset ) RESET=yes ;;
+                        -h | --help ) usage; exit 1 ;;
+                esac
+                shift
+        done
+        [ -z "$PORTS" ] && PORTS="$DEFAULT_PORT"
+}
+
+usage() {
+cat << EOF
+        $PROGNAME [-i IF] [-p PORT] [-h|--help] [--reset]
+EOF
+}
+
+
+filter() {
+        awk '
+                /^T/ { 
+                        src = $2;
+                        dst = $4;
+                } 
+                /^(GET|POST)/ {
+                        method = $1;
+                        uri    = $2;
+                        proto  = $3;
+                } 
+                /^Host:/ { 
+                        host = $2;
+                        gsub("\.$", "", proto);
+                        gsub("\.$", "", host);
+                        print src" -> "dst,"\t",method,proto, host""uri 
+                } 
+        ' # eo AWK
+}
+
+netgrep() {
+        echo "INTERFACE=$INTERFACE" >&2
+
+        build_bpf
+
+        OPTS=
+        OPTS="$OPTS -d $INTERFACE"
+        OPTS="$OPTS -W byline -qlw (GET|POST)"
+
+        #[ "$RESET" = yes ] && OPTS="$OPTS -K"
+        ngrep $OPTS "$BPF"
+}
+
+build_bpf() {
+        BPF=
+        if [ -n "$HOST" ]; then :
+          BPF="host '$HOST'"
+          BPF="$BPF and"
+          echo "HOST=$HOST" >&2
+        fi
+
+        BPF="$BPF ("
+        local p
+        for p in $PORTS; do
+                BPF="$BPF tcp dst port $p or"
+        done
+        BPF="${BPF% or} )"
+        echo "PORTS=$PORTS" >&2
+}
+
+arg_parse "$@"
+
+netgrep | filter
+
