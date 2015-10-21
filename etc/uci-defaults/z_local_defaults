@@ -3,6 +3,7 @@
   DEFAULT_ROOTHOME=/tmp
   DEFAULT_HOSTNAME=dockstar
   DEFAULT_TZ="CET-1CEST,M3.5.0,M10.5.0/3"
+  DEFAULT_ZONENAME="Europe/Amsterdam"
 
   RC_TO_DISABLE=
   RC_TO_DISABLE="$RC_TO_DISABLE qos"
@@ -11,6 +12,11 @@
   RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
   RC_TO_DISABLE="$RC_TO_DISABLE fastd"
   RC_TO_DISABLE="$RC_TO_DISABLE telnet"
+  RC_TO_DISABLE="$RC_TO_DISABLE nfsd"
+  RC_TO_DISABLE="$RC_TO_DISABLE portmap"
+  RC_TO_DISABLE="$RC_TO_DISABLE btrfs-scan"
+  RC_TO_DISABLE="$RC_TO_DISABLE usbmode"
+  RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns"
 
 #- set default root passwort to root, if empty and set root to /tmp
   if grep ^root:: /etc/shadow > /dev/null; then
@@ -24,6 +30,8 @@
 
   uci set system.@system[0].timezone="$DEFAULT_TZ"
   echo "$DEFAULT_TZ" > /var/TZ
+  uci set system.@system[0].zonename="$DEFAULT_ZONENAME"
+  ln -sf /usr/share/zoneinfo/$DEFAULT_ZONENAME /tmp/localtime
 
 #- disable services
   local _rc
