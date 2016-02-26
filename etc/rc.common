@@ -11,7 +11,7 @@ action=${2:-help}
 shift 2
 
 resolv_initscript() {
-  [ -L "$initscript" ] || continue
+  [ -L "$initscript" ] && \
   case "$initscript" in
     ${IPKG_INSTROOT}/etc/init.d/* )
       ;;
