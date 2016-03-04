@@ -1,8 +1,0 @@
-#- dhcp6c
--j accept_dhcp6c
-
-#- POLICY: reject
-#-j log_reject_filtered
-#-j log_reject
--j reject
-

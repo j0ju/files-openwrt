@@ -1,2 +1,0 @@
--o br-wan -j forward_lan_2_wan
--o ppp-wan -j forward_lan_2_wan

@@ -1,9 +1,0 @@
-#- stateful
--m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-#- network matrix
--i br-lan -j forward_lan
-
-#- rest verwerfen
--j log_reject
--j reject
