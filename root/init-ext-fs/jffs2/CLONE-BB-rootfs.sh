@@ -1,1 +1,0 @@
-../CLONE-BB-rootfs.sh
