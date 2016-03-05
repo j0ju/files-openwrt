@@ -22,9 +22,16 @@ if ! [ -c "/dev/$TTY" ]; then
 fi >&2
 
 start_service() {
-  procd_open_instance
-  procd_set_param command
-  procd_append_param command "/usr/bin/pgrphack"
+  if [ -x /usr/bin/pgrphack ]; then
+    procd_open_instance
+    procd_set_param command /usr/bin/pgrphack
+  elif [ -x /usr/bin/chpst ]; then
+    procd_open_instance
+    procd_set_param command /usr/bin/chpst -P -1 -2 -0
+  else
+    echo "E: chpst, pgrphack not found, EXIT" >&2
+    exit 1
+  fi
   procd_append_param command "$PROG"
   procd_append_param command -8 -i -l /bin/login.sh -a root -p -L
   procd_append_param command "$TTY" "$SPEED" vt100

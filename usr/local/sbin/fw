@@ -1,0 +1,75 @@
+#!/bin/sh
+# vim: foldmethod=marker foldmarker={,}
+
+log() { echo "${0##*/}: $*"; }
+clear() {
+	for i in FORWARD INPUT OUTPUT; do
+		log "flush $i"
+		iptables  -t filter -F $i
+		ip6tables -t filter -F $i
+		iptables  -t filter -F
+		ip6tables -t filter -F
+		iptables  -t filter -X
+		ip6tables -t filter -X
+		iptables  -t filter -P $i ACCEPT
+		ip6tables -t filter -P $i ACCEPT
+	done
+
+	log "allow -i lo"
+	iptables  -t filter -A INPUT -i lo -j ACCEPT
+	ip6tables -t filter -A INPUT -i lo -j ACCEPT
+	log "allow ESTABLISHED"
+	iptables  -t filter -A INPUT   -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+	ip6tables -t filter -A INPUT   -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+	iptables  -t filter -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+	ip6tables -t filter -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+	uci show network | while read kv; do
+		case "$kv" in 
+			network.wan*=interface )
+				kv="${kv#network.}"
+				kv="${kv%=interface}"
+				clear_disallow_input "$kv"
+			;;
+		esac
+	done
+}
+clear_disallow_input() {
+	local if="$1"
+	uci show "network.$if" | { 
+		proto=
+		type=
+		ifname=
+		while read kv; do
+			kv="${kv#network.$if}"
+			case "${kv%%=*}" in
+				.proto   ) proto="${kv#*=}" ;;
+				.type    ) type="${kv#*=}" ;;
+				.ifname  ) ifname="${kv#*=}" ;;
+				.ifnames ) ifname="${kv#*=}" ;;
+			esac
+		done
+		case "$ifname" in
+			@* ) clear_disallow_input "${ifname#@}"; break ;;
+		esac
+		case "$proto" in
+			ppp | pppoe | pppoa ) 
+				log "disallow $if ($proto-$if)"
+				iptables  -t filter -A INPUT   -i $proto-$if -j DROP 
+				ip6tables -t filter -A INPUT   -i $proto-$if -j DROP 
+				iptables  -t filter -A FORWARD -i $proto-$if -j DROP 
+				ip6tables -t filter -A FORWARD -i $proto-$if -j DROP 
+				;;
+			* ) log "$0: unknown protocol" >&2
+				log "if=$if proto=$proto type=$type ifname=$ifname" >&2
+				;;
+		esac
+	}
+}
+
+case "$1" in
+	clear ) clear ;;
+	load ) exec fw3 reload ;;
+	start|stop|flush|reload|restart ) exec fw3 "$@" ;;
+	* ) 
+	  echo "usage: $0 [ clear | load | start|stop|flush|reload|restart]"
+esac

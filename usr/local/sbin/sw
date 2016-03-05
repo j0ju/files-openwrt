@@ -1,0 +1,29 @@
+#!/bin/sh
+# vim: foldmethod=marker foldmarker={,}
+
+log() { echo "${0##*/}: $*"; }
+
+sw() {
+  swconfig dev switch0 "$@"
+}
+
+show() {
+  sw show | grep -vE '(uvr|vsr|vinr|tvm|enable_vlan)'
+}
+
+reload() {
+  . /lib/functions.sh
+  . /lib/functions/service.sh
+  
+  setup_switch() { return 0; }
+  
+  include /lib/network
+  setup_switch
+}
+
+case "$1" in
+	"" ) show ;;
+	reload | restart ) reload ;;
+	* ) sw "$@" ;;
+esac
+

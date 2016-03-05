@@ -1,0 +1,57 @@
+#!/bin/sh
+
+list() {
+  printf '%20s %20s %20s\n' NETWORK SSID DISABLED
+  uci show wireless | sort | (
+    while IFS="=" read key value; do
+      case "$key" in
+	   "wireless.@wifi-iface["*"]" )
+	     iface="$key"
+		 printf '%20s %20s %20s %s \n' "$network" "$ssid" "$disabled" "$iface"
+	     ;;
+       *.network | *.ssid | *.disabled ) 
+	     key="${key##*.}"
+		 eval "$key='$value'"
+		 ;;
+       * ) continue ;;
+      esac
+    done
+  )
+}
+
+enable() {
+  local net
+  local changed=0
+  for net in "$@"; do
+    iface="$( list | awk ' $1 == "'"$net"'" {print $4}' )"
+	[ -n "$iface" ] || continue
+	uci set "$iface.disabled=0"
+	echo "$net: $iface.disabled=0"
+	changed=1
+  done
+
+  [ "$changed" = 1 ] && wifi reload
+}
+
+disable() {
+  local net
+  local changed=0
+  for net in "$@"; do
+    iface="$( list | awk ' $1 == "'"$net"'" {print $4}' )"
+	[ -n "$iface" ] || continue
+	uci set "$iface.disabled=1"
+	echo "$net: $iface.disabled=1"
+	changed=1
+  done
+
+  [ "$changed" = 1 ] && wifi reload
+}
+
+
+case "$1" in
+	l | ls | list | show ) list "$2"  ;;
+	e | en | enable ) enable "$2" ;;
+	d | dis | disable ) disable "$2" ;;
+esac
+
+
