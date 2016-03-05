@@ -29,12 +29,12 @@ fi
   fi
 
   # flush jffs2
-  for i in 1 2 3; do
-    sync
-    dd if=/dev/urandom of=.dummy.$$ bs=1k count=1k
-    sync
-    rm -f .dummy.$$ 
-  done
+  #for i in 1 2 3; do
+  #  sync
+  #  dd if=/dev/urandom of=.dummy.$$ bs=1k count=1k
+  #  sync
+  #  rm -f .dummy.$$ 
+  #done
   sync
 )
 
