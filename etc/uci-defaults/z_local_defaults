@@ -4,6 +4,7 @@
   DEFAULT_HOSTNAME=wl500gp
   DEFAULT_TZ="CET-1CEST,M3.5.0,M10.5.0/3"
   DEFAULT_ZONENAME="Europe/Amsterdam"
+  DEFAULT_PW=root
 
   RC_TO_DISABLE=
   RC_TO_DISABLE="$RC_TO_DISABLE qos"
@@ -17,10 +18,14 @@
   RC_TO_DISABLE="$RC_TO_DISABLE btrfs-scan"
   RC_TO_DISABLE="$RC_TO_DISABLE usbmode"
   RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns"
+  RC_TO_DISABLE="$RC_TO_DISABLE bird4"
+  RC_TO_DISABLE="$RC_TO_DISABLE bird6"
 
 #- set default root passwort to root, if empty and set root to /tmp
   if grep ^root:: /etc/shadow > /dev/null; then
-    echo root:root | chpasswd && /etc/init.d/telnet stop > /dev/null 2>&1
+    ( echo "$DEFAULT_PW"
+      echo "$DEFAULT_PW"
+    ) | passwd root && /etc/init.d/telnet stop > /dev/null 2>&1
     sed -i -r -e '/^root/ s@(root:[^:]+:[0-9]+:[0-9]+:[^:]+):[^:]+:(.*$)@\1:'"$DEFAULT_ROOTHOME"':\2@' /etc/passwd
   fi
 

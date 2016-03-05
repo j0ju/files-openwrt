@@ -27,7 +27,6 @@ init() {
   if [ $$ = 1 ]; then
     killall watchdog 2> /dev/null || :
     kill $HOTPLUG_PID 2> /dev/null || :
-    killall hotplug2 2> /dev/null || :
 
     echo "$my - executing init"
     for init in $init $fallback_init; do
@@ -49,7 +48,6 @@ trap init EXIT
 
 echo -n "$my hotplug"
   if [ $$ = 1 ]; then
-    #/sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
     /lib/procd -h /etc/hotplug.json & HOTPLUG_PID=$!
     /sbin/kmodloader /etc/modules-boot.d/
     udevtrigger
@@ -109,7 +107,6 @@ echo "$my mounting rootfs ... "
   if [ $$ = 1 ]; then
     killall watchdog 2> /dev/null || :
     kill $HOTPLUG_PID 2> /dev/null || :
-    killall hotplug2 2> /dev/null || :
   fi
 
   if btrfs sub show "$mnt/rootfs/." > /dev/null 2> /dev/null; then
