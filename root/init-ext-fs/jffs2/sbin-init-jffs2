@@ -17,11 +17,9 @@ mydir="$(dirname "$0")"
   initprogs="$initprogs /etc/preinit"
   initprogs="$initprogs /sbin/init"
 
-  #fallback_init="/bin/busybox init"
-  #fallback_init="/rom/sbin/procd"
-  #fallback_init="/sbin/procd"
   fallback_init="/sbin/init"
-  #fallback_init="/bin/sh"
+  #fallback_init="/sbin/init-jffs2 $fallback_init"
+
 
   #watchdog=/dev/null
   watchdog=/dev/watchdog

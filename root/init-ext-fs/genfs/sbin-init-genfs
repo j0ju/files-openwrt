@@ -13,6 +13,7 @@ mydir="$(dirname "$0")"
   #initprogs="$initprogs /sbin/init"
 
   fallback_init="/sbin/init"
+  fallback_init="/sbin/init-jffs2 $fallback_init"
 
   FS_OPTS_btrfs=relatime,compress=lzo
 
