@@ -1,8 +1,8 @@
 config system
-	option hostname 'dockstar'
+	option hostname 'ar71xx'
   option timezone 'CET-1CEST,M3.5.0,M10.5.0/3'
   option log_size '256'
-  option zram_size_mb '48'
+  option zram_size_mb '16'
 
 config timeserver 'ntp'
 	list server '0.openwrt.pool.ntp.org'

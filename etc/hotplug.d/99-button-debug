@@ -1,0 +1,4 @@
+#!/bin/sh
+
+logger -t "${0##*/}[$$]" "HOTPLUG_TYPE=$HOTPLUG_TYPE BUTTON=$BUTTON ACTION=$ACTION"
+

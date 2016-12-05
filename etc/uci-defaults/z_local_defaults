@@ -19,10 +19,13 @@
   RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns"
 
 #- set default root passwort to root, if empty and set root to /tmp
-  if grep ^root:: /etc/shadow > /dev/null; then
-    echo root:root | chpasswd && /etc/init.d/telnet stop > /dev/null 2>&1
+  #if grep ^root:: /etc/shadow > /dev/null; then
+    if ! echo root:root | chpasswd; then
+      ( echo root; echo root ) | passwd root
+    fi
+    /etc/init.d/telnet stop > /dev/null 2>&1
     sed -i -r -e '/^root/ s@(root:[^:]+:[0-9]+:[0-9]+:[^:]+):[^:]+:(.*$)@\1:'"$DEFAULT_ROOTHOME"':\2@' /etc/passwd
-  fi
+  #fi
 
 #- generate sane defaults to hostname and TZ
   uci set system.@system[0].hostname="$DEFAULT_HOSTNAME"
