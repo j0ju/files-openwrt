@@ -44,7 +44,6 @@ init() {
   if [ $$ = 1 ]; then
     killall watchdog 2> /dev/null || :
     kill $HOTPLUG_PID || :
-    killall hotplug2 2> /dev/null || :
 
     #[ "$newroot" = no ] && initprogs=
     echo "$my - executing init"
@@ -72,7 +71,7 @@ trap init EXIT
 
 echo -n "$my hotplug"
   if [ $$ = 1 ]; then
-    /sbin/hotplug2 --override --persistent --set-rules-file /etc/hotplug2.rules --max-children 1 & HOTPLUG_PID=$!
+    /lib/procd -h /etc/hotplug.json & HOTPLUG_PID=$!
     /sbin/kmodloader /etc/modules-boot.d/
     udevtrigger
   fi
@@ -159,7 +158,6 @@ echo "$my mounting new jffs2 filesystem ... "
   if [ $$ = 1 ]; then
     killall watchdog 2> /dev/null || :
     kill $HOTPLUG_PID || :
-    killall hotplug2 2> /dev/null || :
 
     [ -d "$mnt" ] || mkdir -p "$mnt" "./$mnt"
     set -e

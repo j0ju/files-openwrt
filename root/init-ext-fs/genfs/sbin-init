@@ -14,7 +14,7 @@ cd /
 exec 3> /dev/null
 
 # enable watchdog
-exec 3> /dev/watchdog
+[ -c /dev/watchdog ] && exec 3> /dev/watchdog
 
 # start rom as fallback procd
 [ -x /lib/procd ] && exec /lib/procd

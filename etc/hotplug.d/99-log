@@ -1,0 +1,14 @@
+#!/bin/sh
+
+case "$ACTION" in
+  ifup | add )
+    (
+      exec >> /tmp/hotplug-${HOTPLUG_TYPE:-unknown}.log 2>&1
+      echo --- "$(date)"
+      set -x
+      env
+      #ip -4 a
+      #ip -6 a
+      ls -ld /sys/class/net/*/brport
+    )
+esac

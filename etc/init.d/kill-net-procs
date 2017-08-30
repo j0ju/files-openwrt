@@ -1,0 +1,12 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+STOP=89
+
+SHUTDOWN_PROGS=
+#SHUTDOWN_PROGS="$SHUTDOWN_PROGS foo bar"
+
+stop() {
+  kill $( ( netstat -utlnp; netstat -tnp ) | sed -nre '/^(raw|tcp|udp)/ s@^.* ([0-9]+)/[^/]+$@\1@g p' ) 2> /dev/null
+}
+

@@ -1,0 +1,26 @@
+#!/bin/sh
+# disable IPv6 on slave interfaces
+
+if tty > /dev/null; then
+  HOTPLUG_TYPE=iface
+  ACTION=ifup
+fi
+
+case "$HOTPLUG_TYPE:$ACTION" in 
+  iface:ifup | net:add )
+  
+  # collect slaves
+    SLAVES=
+    for slave in /sys/class/net/*/brport; do 
+	  [ -d "$slave" ] || continue 
+      slave="${slave%/brport}"; slave="${slave##*/}"
+      SLAVES="$SLAVES $slave"
+      case "$slave" in ${slave%.*}.[0-9]* ) SLAVES="$SLAVES ${slave%.*}" ;; esac
+    done
+
+  # disable IPv6 on slave interfaces
+    for slave in $SLAVES; do
+      echo 1 > "/proc/sys/net/ipv6/conf/${slave}/disable_ipv6"
+    done
+  ;;
+esac

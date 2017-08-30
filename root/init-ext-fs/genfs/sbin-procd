@@ -5,12 +5,13 @@ if ! [ $$ = 1 ]; then
   exit 1
 fi >&2
 
-{ echo -n V >&3 && exec 3<&- || : ; } && \
-   echo "$0[$$]: disabled watchdog." || :
+if [ -L /proc/self/fd/3 ]; then
+  echo -n V >&3 && exec 3<&- || : ;
+  echo "$0[$$]: disabled watchdog." || :
+fi
 
-#exec /sbin/init                # standard init
-#exec /sbin/init-jffs2          # search for init on jffs2 prepared usb stick
-exec /sbin/init-genfs          # search for rootfs/etc/preinit on a prepared usb stick
+#exec /sbin/init-jffs2           # search for init on jffs2 prepared usb stick
+exec /sbin/init-genfs           # search for init on jffs2 prepared usb stick
 
 # falltrough
 exec /bin/sh                   # debugging shell

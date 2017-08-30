@@ -1,0 +1,20 @@
+#!/bin/sh
+
+case "$HOTPLUG_TYPE:$ACTION" in
+  iface:ifup | net:add )
+
+  # collect wifi interfaces in bridges
+    for slave in /sys/class/net/*/brport; do
+      slave="${slave%/brport}"
+      [ -d "$slave/wireless" ] || continue
+      slave="${slave##*/}"
+      SLAVES="$SLAVES $slave"
+      [ "$slave" = "${slave%.[0-9]*}" ] || SLAVES="$SLAVES ${slave%.[0-9]*}"
+    done
+
+    for slave in $SLAVES; do
+	ifconfig $slave mtu 1504
+    done
+
+esac
+

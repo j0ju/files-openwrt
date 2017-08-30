@@ -1,9 +1,10 @@
 #!/bin/sh
 
-DEBUG=no # yes                # set -x
+DEBUG=no # no # yes                # set -x
 SHELL_1ST=no             # exec to /bin/sh on first run
 
 #INIT=/bin/sh             # debugging
+#INIT=/bin/bash             # debugging
 INIT=/sbin/init          # OpenWrt 12.09 Attitude Adjustment, generic
 #INIT=/sbin/procd         # OpenWrt Barrier Breaker
 #INIT=/lib/procd          # OpenWrt Barrier Breaker (modified)
@@ -25,27 +26,26 @@ set -e
 [ "$SHELL_1ST" = yes ] && exec /bin/sh
 
 killall hotplug2 2> /dev/null || :
+killall procd 2> /dev/null || :
 killall ubusd 2> /dev/null || :
 killall netifd 2> /dev/null || :
-mount -o move /mnt/dev /dev || :
+busybox mount -o move /mnt/dev /dev || :
 [ -c /dev/console ] &&  exec < /dev/console 1>/dev/console 2>/dev/console
-mount -o move /mnt/sys /sys
-mount -o move /mnt/tmp /tmp
-umount /mnt/proc
+busybox mount -o move /mnt/sys /sys
+busybox mount -o move /mnt/tmp /tmp
+busybox umount /mnt/proc
 
-mkdir -p /tmp/rom
-mount -o move /mnt/rom /tmp/rom
-mkdir -p /tmp/overlay
-mount -o move /mnt/overlay /tmp/overlay
-umount /mnt || :
-umount /tmp/rom || :
-umount /tmp/overlay || :
-rmdir /tmp/rom /tmp/overlay || :
+busybox mount -o move /mnt/rom /mnt
+busybox umount /mnt
+busybox mount -o move /mnt/overlay /mnt
+busybox umount /mnt || :
+busybox umount /mnt || :
 
 #- remount RW
-#       mount -o remount,compress=lzo,noatime /
-#       mount -o remount,ro /
-#       mount -o remount,rw /
+#       busybox mount -o remount,compress=lzo /
+       busybox mount -o remount,noatime /
+#       busybox mount -o remount,ro /
+       busybox mount -o remount,rw /
 chmod 1777 /tmp/.
 
 #- cleanup traps

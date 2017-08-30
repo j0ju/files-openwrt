@@ -1,0 +1,50 @@
+#!/bin/sh
+
+CACHE=/var/cache/list-clients
+mkdir -p "${CACHE%/*}"
+
+cleanup() {
+    [ -n "$T1" ] && [ -d "$T1" ] && \
+         rm -rf "$T1"
+}
+trap cleanup EXIT KILL TERM QUIT INT
+T1="$(mktemp -d)"
+
+{
+    printf '%3s %10s %20s %10s %18s %20s\n' "" WIFI IP IF MAC HOSTNAME
+    {
+        which fping > /dev/null && \
+            ip a | awk '$1 == "inet" && $2 !~ "^(127|0|224|240|239)" {print $2}' | xargs -n 1 fping -c 1 -r 1 -q -g 2> /dev/null
+        collect-clients-IF-MAC-IP-HOST
+    } | \
+        sort -k3 -n -t" " | \
+        (
+            count=0
+            while read if mac ip host more; do
+                #- filter local ips
+                case "$ip" in 
+                     127.* | ::1 ) continue ;;	# ignore local loopback
+                     f[ef]*:* ) continue ;;     # ignore ip6-localnet, ignore ip6-multicast
+                esac
+                (
+                    up=.
+                    if [ "$if" = "-" ]; then
+    	                #fping -c 1 -t 350 -q "$ip" 2>/dev/null 1>/dev/null
+                        ping -c 1 -w 1 -q "$ip" 2>/dev/null 1>/dev/null
+                     else
+                        arping -c 1 -w 1 -I "$if" -q "$ip" 2>/dev/null 1>/dev/null || \
+                           ping -c 1 -w 1 -q "$ip" 2>/dev/null 1>/dev/null
+                     fi && up=UP
+
+                     ssid="${more#*/}"
+                     [ "$1" != -a ] && [ "$up" != UP ] && continue
+                     printf '%3s %10s %20s %10s %18s %20s\n' "$up" "$ssid" "$ip" "$if" "$mac" "$host" > "$T1/$count"
+                ) & 
+                count="$((count+1))"
+            done
+            wait
+        )
+    cat "$T1"/*
+} | \
+    tee "$CACHE"
+
