@@ -1,0 +1,116 @@
+#!/bin/sh
+
+OPKG_DEST=ram
+RAM_DIR="$(grep "dest $OPKG_DEST" /etc/opkg.conf | cut -f 3 -d " " )"
+RAM_DIR="${RAM_DIR%/}"
+
+if ! [ -d "$RAM_DIR" ]; then
+  mkdir -p "$RAM_DIR"
+  [ -d "$RAM_DIR/tmp" ] || ln -s /tmp "$RAM_DIR"/tmp
+  [ -d "$RAM_DIR/var" ] || ln -s /tmp "$RAM_DIR"/var
+fi
+
+_X() {
+  ( set -x
+    "$@" 
+  )
+}
+
+usage() {
+cat >&2 << EOF
+usage: wrapper arount opkg, use opkg for more help
+  $0 list | status | install | remove | enable | disable | update | files
+EOF
+}
+
+status() {
+  opkg -o "$RAM_DIR" list
+}
+
+install() {
+  opkg -d "$OPKG_DEST" install "$@" && \
+    enable "$@"
+}
+
+remove() {
+  opkg -d "$OPKG_DEST" remove "$@"
+}
+
+files() {
+  opkg files "$@"
+}
+
+enable() {
+  local p files src dst rlink dir
+  for p in "$@"; do
+    files "$p" | while read src; do
+      [ -f "$src" ] || continue
+      dst="${src#$RAM_DIR}"
+
+      if [ -L "$dst" ]; then
+        rlink="$(readlink "$dst")"
+        [ "$rlink" = "$src" ] && \
+          continue
+      fi
+
+      if [ -f "$dst" ]; then
+        #echo "I: would install $src -> $dst, but file already exists."
+        echo "I: would install $dst, but file already exists."
+        continue
+      fi
+
+      dir="${dst%/*}"
+      [ -d "$dir" ] || \
+        _X mkdir -p "$dir"
+
+      case "$dst" in
+        /etc/* ) 
+          _X cp -a "$src" "$dst" 
+          ;;
+        * )
+          _X ln -s "$src" "$dst"
+          ;;
+      esac
+
+    done
+  done
+}
+
+disable() {
+  local p files src dst rlink dir
+  for p in "$@"; do
+    files "$p" | while read src; do
+      [ -f "$src" ] || continue
+      dst="${src#$RAM_DIR}"
+
+      if [ -L "$dst" ]; then
+        rlink="$(readlink "$dst")"
+        [ "$rlink" = "$src" ] && \
+          _X rm -f "$dst"
+	  continue
+      fi
+
+      if [ -f "$dst" ]; then
+        echo "I: would uninstall $dst, but it is not linked."
+        continue
+      fi
+    done
+  done
+}
+
+cmd="$1"
+[ $# -gt 0 ] && shift
+
+case "$cmd" in
+  up | update ) opkg update ;;
+  l | ls | li | list )  opkg list ;;
+
+  i | ins | install ) install "$@" ;;
+  rm | remove )       remove  "$@" ;;
+  s | st  | status  ) status  "$@" ;;
+  e | en  | enable  ) enable  "$@" ;;
+  d | di  | disable ) disable "$@" ;;
+  f | files )         files   "$@" ;;
+
+  "" | help | -h | * ) usage ;;
+esac

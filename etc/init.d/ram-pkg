@@ -1,0 +1,55 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+PATH=/usr/local/sbin:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin
+
+OPKG_DEST=ram
+RAM_DIR="$(grep "dest $OPKG_DEST" /etc/opkg.conf | cut -f 3 -d " " )"
+RAM_DIR="${RAM_DIR%/}"
+
+PKG_LIST=/etc/ram-pkg.list
+
+boot() { 
+  exec > /tmp/ram-pkg.log 2>&1
+  echo "--- $(date)"
+  set -x
+  backgrounded_start & 
+}
+start() { backgrounded_start; }
+stop() { :; }
+restart() { start; }
+reload() { start; }
+
+wait_opkg_list_update() {
+  while ! P update > /dev/null 2> /dev/null; do
+    sleep 30
+  done
+}
+
+list_installed_autostart_svcs() {
+  local i l
+  for i in "$RAM_DIR/etc/init.d"/*; do
+    i="${i#$RAM_DIR}"
+    [ -x "$i" ] || \
+      continue
+    l="${i##*/}"
+    ls -l /etc/rc.d/S* | awk '/..\/init.d\/'"$l"'/ {print $(NF-2)}'
+  done | sort -n
+}
+
+start_installed_autostart_svcs() {
+  list_installed_autostart_svcs | while read f; do
+    "$f" "$action"    
+  done
+}
+
+backgrounded_start() {
+  wait_opkg_list_update
+  local pkgs="$(grep -v ^# "$PKG_LIST" 2> /dev/null | grep -Ev '^ +$')"
+  if [ -n "$pkgs" ]; then
+     if P install $pkgs; then
+       start_installed_autostart_svcs
+     fi
+  fi
+}
+

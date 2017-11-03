@@ -1,0 +1,4 @@
+# config file for /etc/init.d/ram-pkg
+# for local packages installed in RAM available after uplink is avail
+#
+#collectd
