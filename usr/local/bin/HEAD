@@ -1,0 +1,28 @@
+#!/bin/sh
+
+URL="$1"
+
+PROTO=http
+[ "${URL%%://*}" = "$URL" ] || PROTO="${URL%%://*}"
+
+HOST="${URL#$PROTO://}"
+HOST="${HOST%%/*}"
+
+URI="${URL#$PROTO://}"
+URI="${URI#$HOST}"
+
+PORT=80
+case "$PROTO" in
+  http ) PORT=80 ;;
+  https ) PORT=443 ;;
+esac
+
+[ "${HOST#*:}" = "$HOST" ] || PORT="${HOST#*:}"
+[ "${HOST#*:}" = "$HOST" ] || HOST="${HOST%%:*}"
+
+{
+cat << EOF
+Host: $HOST
+GET $URI
+EOF
+} | nc $HOST $PORT | tr -d '\015' | awk 'BEGIN { p=1 } /^$/ { p=0 } /^/ { if (p==1) print }'

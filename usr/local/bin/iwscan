@@ -1,0 +1,22 @@
+dev=w-wan
+
+iw dev $dev scan | \
+  awk '
+    $1 == "BSS"   { 
+      bss=$2
+      gsub("\(on","", bss) 
+    } 
+    $1 == "freq:" { 
+      freq = $2 
+    }
+    $1 =="signal:" { 
+      signal=$2
+      #gsub("^-","", signal)
+      #gsub("[.].*$","", signal)
+    }
+    $1 == "SSID:" { 
+      ssid=$0
+      gsub("^.*SSID: ","", ssid)
+      print signal, freq, bss, ssid }
+  ' | sort -n
+
