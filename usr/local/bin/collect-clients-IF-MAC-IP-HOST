@@ -1,0 +1,87 @@
+#!/bin/sh
+
+# collect data from all sources
+# - space seperated list 
+# - INTERFACE MAC IP HOSTNAME
+# - "-" equals NULL
+
+# ARP
+collect_clients_arp() {
+	< /proc/net/arp awk 'BEGIN {getline} $4 != "00:00:00:00:00:00" {print $6,$4,$1,"-"}'
+}
+
+# WIFI APs 
+collect_clients_wifi_ap() {
+	wifi="$(iw dev | awk '$1 == "Interface" {i=$2} $1 == "ssid" {ssid=$2} $1 == "type" && $2 ~ "AP|managed" {print i"/"ssid}')"
+	# output: wlan0/EMS1int wlan1/foo
+	
+	[ -n "$wifi" ] && for if in $wifi; do
+		ssid="${if#*/}"
+		if="${if%/*}"
+		iw $if station dump | awk '$1 == "Station" {mac=$2; print mac}' | while read mac; do echo - $mac - - $if/$ssid; done
+	done
+}
+
+# DHCP DNSMASQ leases
+collect_clients_dhcp_dnsmasq_leases() {
+	< /tmp/dhcp.leases awk '{print "-", $2, $3, $4 }'
+}
+
+# /etc/hosts
+collect_clients_hosts() {
+	< /etc/hosts awk '/^[ ]*[^# ]/ {gsub("[.]$","",$2); print "-","-",$1, $2}'
+}
+
+join_on_ip() {
+	awk '{
+		if ($1 != "-") itf[$3] = $1; 
+		if ($2 != "-") mac[$3] = $2; 
+		ip[$3] = $3
+		if ($4 != "-") host[$3] = $4; 
+		if ($5 != "-") more[$3] = $5; 
+	} 
+	END {
+		for (k in ip) { 
+			if (itf[k]=="") itf[k] = "-";
+			if (mac[k]=="") mac[k] = "-";
+			if (host[k]=="") host[k] = "-";
+			if (more[k]=="") more[k] = "-";
+			print itf[k], mac[k], ip[k], host[k], more[k]; 
+		} 
+	}' "$@"
+}
+
+join_on_mac() {
+	awk '{
+		if ($1 != "-") itf[$2] = $1; 
+		mac[$2] = $2
+		if ($3 != "-") ip[$2] = $3; 
+		if ($4 != "-") host[$2] = $4; 
+		if ($5 != "-") more[$2] = $5; 
+	} 
+	END {
+		for (k in mac) {
+			if (itf[k]=="") itf[k] = "-";
+			if (ip[k]=="") ip[k] = "-";
+			if (host[k]=="") host[k] = "-";
+			if (more[k]=="") more[k] = "-";
+			print itf[k], mac[k], ip[k], host[k], more[k];
+		} 
+	}' "$@"
+}
+
+cleanup() {
+	rm -f "$T1" "$T2" "$T3"
+}
+trap cleanup EXIT KILL TERM QUIT INT
+T1="$(mktemp)"
+T2="$(mktemp)"
+T3="$(mktemp)"
+
+collect_clients_hosts > "$T2"
+collect_clients_dhcp_dnsmasq_leases | join_on_ip "$T2" - > "$T1"
+
+collect_clients_arp > "$T3"
+collect_clients_wifi_ap | join_on_mac "$T3" - | \
+	join_on_ip "$T1" - 
+	
