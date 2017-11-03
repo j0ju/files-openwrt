@@ -1,52 +1,51 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2006 OpenWrt.org
 
-SHUTDOWN_PROGS=
-#SHUTDOWN_PROGS="$SHUTDOWN_PROGS foo"
-
 STOP=99
+
+SHUTDOWN_PROGS=
+#SHUTDOWN_PROGS="$SHUTDOWN_PROGS foo bar"
+
+tac () {
+  local _line
+  while read -r _line ; do
+    tac
+    echo "$_line"
+    break
+  done
+}
 
 stop() {
   trap "echo SIGINT " INT
   trap "echo SIGQUIT" QUIT
   trap "echo SIGTERM" TERM
 
+  sync
   [ -n "$SHUTDOWN_PROGS" ] && for prog in $SHUTDOWN_PROGS; do
     killall -q "$prog"
   done
-
-  sync
-  sleep 3
-
-  tac () {
-    local _line
-    while read -r _line ; do
-      tac
-      echo "$_line"
-      break
-    done
-  }
-
   sync
 
   tac < /proc/mounts | \
   while read dev mntpnt type opts; do
     [ "$mntpnt" = /proc ] && continue
-    ( set -x
-      umount -n -f "$mntpnt" || mount  -n -o remount,ro "$mntpnt"
-    )
+    umount -n -f "$mntpnt" || mount  -n -o remount,ro "$mntpnt"
   done
-  echo
 
-  cat /proc/mounts
-  sync
+  (
+    echo
+    echo "--- /proc/mounts ------------------------------"
+    cat /proc/mounts
+    echo "-----------------------------------------------"
+    echo
+  ) | tee -a /dev/console
 
   if [ -f /proc/sysrq-trigger ]; then
+    sleep 1
     echo sync > /proc/sysrq-trigger
     sleep 3
     echo umount > /proc/sysrq-trigger
   fi
-  sleep 3
 
   echo
   echo "Ready to shutdown system..."

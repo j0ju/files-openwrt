@@ -1,2 +1,2 @@
 # empty /etc/config/fstab - fill with
-#   /sbin/block detect
+#   /sbin/block detect > /etc/config/fstab

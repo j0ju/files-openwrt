@@ -3,9 +3,56 @@
 
 #- user config files for root in temp legen
   cp -a /root/.[a-z]* /tmp
+ 
+#- remount /rom RO
+  mount -o remount -r /rom
+
+#- umount debugfs
+  umount /sys/kernel/debug
+
+#- create certain dirs
+  mkdir -p \
+    /var/cache/vim/swap \
+    #
+
+#- add opkg list symlinks if not on rom
+#  [ -d /usr/lib/opkg/lists ] || mkdir -p /usr/lib/opkg/lists
+#  mkdir -p /var/cache/opkg
+#  rm -rf /var/cache/opkg/lists
+#  ln -s /usr/lib/opkg/lists /var/cache/opkg/lists
+#
+#- blackhole multicast and RFC1918 with no more specific prefixes
+  # RFC1918
+  ip route add unreachable 10.0.0.0/8 2> /dev/null
+  ip route add unreachable 192.168.0.0/16 2> /dev/null
+  ip route add unreachable 172.16.0.0/12 2> /dev/null
+  # LL - RFC3927
+  ip route add unreachable 169.254.0.0/16 2> /dev/null
+  # NAT 444 - CGN - RFC6598
+  ip route add unreachable 100.64.0.0/10 2> /dev/null
+  # TESTNET - RFC5737
+  ip route add unreachable 192.0.2.0/24 2> /dev/null
+  ip route add unreachable 203.0.113.0/24 2> /dev/null
+  ip route add unreachable 198.51.100.0/24 2> /dev/null
+  # reserved RFC2544
+  ip route add unreachable 198.18.0.0/15 2> /dev/null
+  # 6to4 Anycast - RFC3068
+  ip route add unreachable 192.88.99.0/24 2> /dev/null
+  # reserved - RFC5736
+  ip route add unreachable 192.0.0.0/24 2> /dev/null
+  # Multicast - RFC5771
+  ip route add unreachable 224.0.0.0/4 2> /dev/null
+  # reserved - RFC6890
+  ip route add unreachable 240.0.0.0/4 2> /dev/null
+
+#- cleanup /tmp
+  rmdir \
+    /tmp/extroot \
+    /tmp/overlay \
+  2> /dev/null # eo RMDIR
 
 #- resize tmp
-  /usr/local/sbin/tmp-resize 10240
+  /usr/local/sbin/tmp-resize 32768 1> /dev/null
 
 # end
 exit 0

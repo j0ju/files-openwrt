@@ -5,6 +5,7 @@ for iptables in iptables ip6tables; do
 		[ "$minusA" = "-A" ] || continue
 		case "$chain" in
 			*_REJECT ) ;;
+			*_DROP ) ;;
 			* ) continue ;;
 		esac
 		case "$more" in	
