@@ -1,7 +1,7 @@
 #!/bin/sh
 
-FMT='%s:%s %012s %012s %s - %s \n'
-HEAD="-VID -PID DEV DRIVER PRODUCTNAME MANUFACTURER"
+FMT='%4s:%-4s %012s %012s %s - %s \n'
+HEAD="VID PID DEV DRIVER PRODUCTNAME MANUFACTURER"
 
 HEAD="$(printf "$FMT" $HEAD)"
 for d in /sys/bus/usb/devices/*; do
