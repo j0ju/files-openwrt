@@ -2,8 +2,7 @@
 # vim: foldmethod=marker:foldmarker=#{,#}
 BASEDIR="${0%/*}"
 set -e
-set -x
-
+#set -x
 umask 022
 
 #{ modify preinit to load from /etc/modules-boot.d/ before
