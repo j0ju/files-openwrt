@@ -44,12 +44,12 @@ start_installed_autostart_svcs() {
 }
 
 backgrounded_start() {
-  wait_opkg_list_update
   local pkgs="$(grep -v ^# "$PKG_LIST" 2> /dev/null | grep -Ev '^ +$')"
   if [ -n "$pkgs" ]; then
-     if P install $pkgs; then
-       start_installed_autostart_svcs
-     fi
+    wait_opkg_list_update
+    if P install $pkgs; then
+      start_installed_autostart_svcs
+    fi
   fi
 }
 
