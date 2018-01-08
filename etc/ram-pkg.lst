@@ -1,4 +1,28 @@
 # config file for /etc/init.d/ram-pkg
 # for local packages installed in RAM available after uplink is avail
 #
+#
 #collectd
+#collectd-mod-conntrack
+#collectd-mod-df
+#collectd-mod-disk
+#collectd-mod-entropy
+#collectd-mod-exec
+#collectd-mod-interface
+#collectd-mod-iwinfo
+#collectd-mod-load
+#collectd-mod-memory
+#collectd-mod-ping
+#collectd-mod-processes
+#collectd-mod-syslog
+#collectd-mod-thermal
+#collectd-mod-uptime
+#collectd-mod-vmem
+#collectd-mod-wireless
+#collectd-mod-write-graphite
+#libiwinfo
+#libltdl
+#liboping
+#
+#libhavege
+#haveged

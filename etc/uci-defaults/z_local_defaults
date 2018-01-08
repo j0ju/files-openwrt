@@ -51,3 +51,6 @@
 #- uci commit
   uci commit
 
+#- set opkg.conf ram destionation directory
+  sed -re 's@^(dest ram) .*$@\1 /tmp/ram.opkg@' /etc/opkg.conf
+

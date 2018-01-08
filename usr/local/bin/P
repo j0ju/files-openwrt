@@ -12,7 +12,7 @@ fi
 
 _X() {
   ( set -x
-    "$@" 
+    "$@"
   )
 }
 
@@ -28,8 +28,10 @@ status() {
 }
 
 install() {
-  opkg -d "$OPKG_DEST" install "$@" && \
+  if opkg -d "$OPKG_DEST" install "$@"; then
     enable "$@"
+    rm -f "$RAM_DIR/usr/lib/opkg/info/"*.postinst
+  fi
 }
 
 remove() {
@@ -37,7 +39,7 @@ remove() {
 }
 
 files() {
-  opkg files "$@"
+  opkg -d "$OPKG_DEST" files "$@"
 }
 
 enable() {
