@@ -1,0 +1,72 @@
+--- rc.common	2018-01-09 13:54:00.002019728 +0100
++++ /srv/src/build/tp-w8970-dev/lede-17.01-git/files/etc/rc.common	2018-01-09 14:02:29.012172741 +0100
+@@ -1,6 +1,9 @@
+ #!/bin/sh
+ # Copyright (C) 2006-2012 OpenWrt.org
+ 
++# vim: ts=2 sw=2 et ft=sh
++# (C) 2014-2018 additions by Joerg Jungermann
++
+ . $IPKG_INSTROOT/lib/functions.sh
+ . $IPKG_INSTROOT/lib/functions/service.sh
+ 
+@@ -8,6 +11,52 @@
+ action=${2:-help}
+ shift 2
+ 
++rcstep=
++resolv_rcstep() {
++  case "$initscript" in
++    /etc/rc.d/[SK][0-9][0-9]* )
++      local rc="${initscript##*/}"
++      local script="${rc##???}"
++      rc="${rc%$script}"
++      rcstep="$rc"
++  esac
++}
++resolv_rcstep
++
++resolv_initscript() {
++  if [ -L "$initscript" ]; then
++    case "$initscript" in
++      ${IPKG_INSTROOT}/etc/init.d/* )
++        ;;
++      * )
++        case "$(readlink "$initscript")" in
++          /* )
++            initscript="$(readlink "$initscript")" ;;
++          * )
++            initscript="${initscript%/*}/$(readlink "$initscript")"
++            initscript="$(readlink -f "${initscript%/*}")/${initscript##*/}"
++            ;;
++        esac
++        resolv_initscript
++        ;;
++    esac
++  fi
++}
++which readlink > /dev/null 2>&1 && \
++  resolv_initscript
++
++case "$action" in
++  running | enabled ) ;;
++  *)
++    #mkdir -p /var/log
++    #env | sort > "/var/log/${initscript##*/}.init${rcstep:+.$rcstep}.$action.$$.env"
++    logger -t "${initscript#/etc/}[$$]" "$action${rcstep:+ ($rcstep)} $*"
++    ;;
++esac
++
++en() { enable; }
++dis() { disable; }
++
+ start() {
+ 	return 0
+ }
+@@ -140,5 +189,6 @@
+ }
+ 
+ ALL_COMMANDS="start stop reload restart boot shutdown enable disable enabled depends ${EXTRA_COMMANDS}"
++ALL_COMMANDS="${ALL_COMMANDS} en dis"
+ list_contains ALL_COMMANDS "$action" || action=help
+ $action "$@"
