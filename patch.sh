@@ -40,6 +40,7 @@ __PREFIX__="$BASEDIR" "$BASEDIR/usr/local/bin/update-rc"
   RC_TO_DISABLE="$RC_TO_DISABLE portmap"
   RC_TO_DISABLE="$RC_TO_DISABLE btrfs-scan"
   RC_TO_DISABLE="$RC_TO_DISABLE usbmode"
+  RC_TO_DISABLE="$RC_TO_DISABLE cron crond"
   RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns"
   RC_TO_DISABLE="$RC_TO_DISABLE keepalived"
   RC_TO_DISABLE="$RC_TO_DISABLE bird4 bird6"
@@ -78,4 +79,21 @@ grep -E -o '(proto_run_command [^ ]+ )([^\ ]+)' "$BASEDIR"/lib/netifd/proto/* 2>
   sed -i -re 's@(proto_run_command [^ ]+ )([^ ]+)@\1'"$real_proc"'@' "$BASEDIR/$file"
 done
 #}
-
+#{ patch openwrt files
+  ( cd "$BASEDIR"
+  set -x
+    find . -name "*.diff" | while read diff; do
+      file="${diff#./}"
+      file="${file%.diff}"
+      echo "* /$file"
+      awk '($1 == "---" || $1 == "+++") && $2 = "'"$file"'" {  } {print $0}' $diff | patch -p0
+    done
+  )
+#}
+#{ ensure correct permissions
+  ( cd "$BASEDIR"
+    find . -type d             -exec chmod u+rwx,go+rx,u-s,go-ws,-t {} +
+    find . -type f -perm /0111 -exec chmod u+rwx,go+rx              {} +
+    chmod 1777 tmp
+  )
+#}
