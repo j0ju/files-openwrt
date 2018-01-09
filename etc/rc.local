@@ -5,10 +5,10 @@
   cp -a /root/.[a-z]* /tmp
  
 #- remount /rom RO
-  mount -o remount -r /rom
+  mount -o remount -r /rom 2> /dev/null || :
 
 #- umount debugfs
-  umount /sys/kernel/debug
+  umount /sys/kernel/debug 2> /dev/null || :
 
 #- create certain dirs
   mkdir -p \
@@ -52,7 +52,7 @@
   2> /dev/null # eo RMDIR
 
 #- resize tmp
-  /usr/local/sbin/tmp-resize 32768 1> /dev/null
+  /usr/local/sbin/tmp-resize 16384 1> /dev/null
 
 # end
 exit 0
