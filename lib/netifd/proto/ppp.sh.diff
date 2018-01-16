@@ -1,0 +1,12 @@
+--- ppp.sh.o	2018-01-14 21:45:51.000000000 +0100
++++ ppp.sh	2018-01-15 03:25:07.000000000 +0100
+@@ -142,7 +142,8 @@
+ 		usepeerdns \
+ 		$demand $persist maxfail $maxfail \
+ 		${holdoff:+holdoff "$holdoff"} \
+-		${username:+user "$username" password "$password"} \
++		${username:+user "$username"} \
++		${username:+${password:+ password "$password"}} \
+ 		${connect:+connect "$connect"} \
+ 		${disconnect:+disconnect "$disconnect"} \
+ 		ip-up-script /lib/netifd/ppp-up \
