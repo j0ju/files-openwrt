@@ -26,23 +26,14 @@ __PREFIX__="$BASEDIR" "$BASEDIR/usr/local/bin/update-rc"
   RC_TO_DISABLE="$RC_TO_DISABLE qos"
   RC_TO_DISABLE="$RC_TO_DISABLE firewall"
   RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
-  RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
-  RC_TO_DISABLE="$RC_TO_DISABLE fastd"
+  RC_TO_DISABLE="$RC_TO_DISABLE fastd openvpn"
   RC_TO_DISABLE="$RC_TO_DISABLE telnet"
-  RC_TO_DISABLE="$RC_TO_DISABLE qos"
   RC_TO_DISABLE="$RC_TO_DISABLE httpd uhttpd"
-  RC_TO_DISABLE="$RC_TO_DISABLE firewall"
-  RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
-  RC_TO_DISABLE="$RC_TO_DISABLE openvpn"
-  RC_TO_DISABLE="$RC_TO_DISABLE fastd"
-  RC_TO_DISABLE="$RC_TO_DISABLE telnet"
-  RC_TO_DISABLE="$RC_TO_DISABLE nfsd"
-  RC_TO_DISABLE="$RC_TO_DISABLE portmap"
-  RC_TO_DISABLE="$RC_TO_DISABLE btrfs-scan"
+  RC_TO_DISABLE="$RC_TO_DISABLE nfsd portmap"
+  RC_TO_DISABLE="$RC_TO_DISABLE fstab btrfs-scan"
   RC_TO_DISABLE="$RC_TO_DISABLE usbmode"
   RC_TO_DISABLE="$RC_TO_DISABLE cron crond"
-  RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns"
-  RC_TO_DISABLE="$RC_TO_DISABLE keepalived"
+  RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns keepalived igmpproxy etherwake relayd"
   RC_TO_DISABLE="$RC_TO_DISABLE bird4 bird6"
 
   for _rc in $RC_TO_DISABLE; do
@@ -86,13 +77,15 @@ done
       file="${diff#./}"
       file="${file%.diff}"
       echo "* /$file"
-      awk '($1 == "---" || $1 == "+++") && $2 = "'"$file"'" {  } {print $0}' $diff | patch -p0
+      awk '($1 == "---" || $1 == "+++") && $2 = "'"$file"'" {  } {print $0}' "$diff" | patch -p0 && \
+        rm -f "$diff"
     done
   )
 #}
 #{ ensure correct permissions
   ( cd "$BASEDIR"
     find . -type d             -exec chmod u+rwx,go+rx,u-s,go-ws,-t {} +
+    find . -type f             -exec chmod u+rw,go+r                {} +
     find . -type f -perm /0111 -exec chmod u+rwx,go+rx              {} +
     chmod 1777 tmp
   )
