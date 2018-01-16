@@ -1,1 +1,1 @@
-..//etc/vimrc
+../etc/vimrc
