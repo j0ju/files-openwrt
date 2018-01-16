@@ -1,0 +1,11 @@
+--- openvpn.o	2018-01-14 22:00:32.941952903 +0100
++++ openvpn	2018-01-14 22:01:21.956899174 +0100
+@@ -62,7 +62,7 @@
+ 
+ 	procd_open_instance "$name"
+ 	procd_set_param command "$PROG"	\
+-		--syslog "openvpn($name)" \
++		--syslog "ovpn-$name" \
+ 		--status "/var/run/openvpn.$name.status" \
+ 		--cd "$dir" \
+ 		--config "$conf"
