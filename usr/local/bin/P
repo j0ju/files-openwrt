@@ -28,14 +28,36 @@ status() {
 }
 
 install() {
-  if opkg -d "$OPKG_DEST" install "$@"; then
-    enable "$@"
-    rm -f "$RAM_DIR/usr/lib/opkg/info/"*.postinst
+  local F=
+  if [ "$1" = -F ]; then
+    F=-F
+    shift
   fi
+  opkg --noaction -d "$OPKG_DEST" install "$@" | awk '$1 == "Installing" { print $2 }' | sort -r | while read pkg; do
+    if $_X opkg -d "$OPKG_DEST" install "$pkg"; then :
+      enable $F "$pkg"
+      rm -f "$RAM_DIR/usr/lib/opkg/info/"*.postinst
+    fi
+  done
 }
 
 remove() {
-  opkg -d "$OPKG_DEST" remove "$@"
+  local pkg info=
+
+  for pkg in "$@"; do
+    info="$info $pkg.list"
+  done
+
+  # try to get packges in configure order
+  local pkgs="$( cd "$RAM_DIR/usr/lib/opkg/info"; ls -t $info 2> /dev/null | sed -re 's/[.][^.]+$//')"
+
+  for pkg in "$@"; do
+    disable "$pkg"
+    { 3>&1 1>&2 2>&3 3>&- \
+      _X opkg -d "$OPKG_DEST" remove "$pkg" | \
+        sed -e "/^cat: can't open / d"
+    } 3>&1 1>&2 2>&3 3>&-
+  done
 }
 
 files() {
@@ -44,6 +66,11 @@ files() {
 
 enable() {
   local p files src dst rlink dir
+  local F=
+  if [ "$1" = -F ]; then
+    F=-f
+    shift
+  fi
   for p in "$@"; do
     files "$p" | while read src; do
       [ -f "$src" ] || continue
@@ -55,24 +82,28 @@ enable() {
           continue
       fi
 
-      if [ -f "$dst" ]; then
-        #echo "I: would install $src -> $dst, but file already exists."
+      if [ -n "$F" ] && [ -f "$dst" ]; then
         echo "I: would install $dst, but file already exists."
         continue
       fi
 
       dir="${dst%/*}"
-      [ -d "$dir" ] || \
-        _X mkdir -p "$dir"
+      mkdir -p "$dir"
 
       case "$dst" in
-        /etc/* ) 
-          _X cp -a "$src" "$dst" 
+        /lib/upgrade/* )
+          # NOP
+          ;;
+        /etc/* )
+          local OP="CP$F "
+          cp -a $F "$src" "$dst"
           ;;
         * )
-          _X ln -s "$src" "$dst"
+          local OP="LN$F "
+          ln -s $F "$src" "$dst"
           ;;
       esac
+      echo "$OP $dst"
 
     done
   done
@@ -81,18 +112,18 @@ enable() {
 disable() {
   local p files src dst rlink dir
   for p in "$@"; do
-    files "$p" | while read src; do
+    files "$p" | sort -r | while read src; do
       [ -f "$src" ] || continue
       dst="${src#$RAM_DIR}"
 
-      if [ -L "$dst" ]; then
+      if   [ -L "$dst" ]; then
         rlink="$(readlink "$dst")"
         [ "$rlink" = "$src" ] && \
           _X rm -f "$dst"
 	  continue
-      fi
-
-      if [ -f "$dst" ]; then
+      elif [ -d "$src" ]; then
+	rmdir "$d" 2> /dev/null
+      elif [ -f "$dst" ]; then
         echo "I: would uninstall $dst, but it is not linked."
         continue
       fi
@@ -116,3 +147,8 @@ case "$cmd" in
 
   "" | help | -h | * ) usage ;;
 esac
+
+cd /tmp
+find . -name "opkg-??????" -type d | while read f; do
+    _X rm -rf "$f"
+  done
