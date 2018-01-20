@@ -1,0 +1,139 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2010-2014 OpenWrt.org
+
+#ROM_LD=no
+CACHE=/var/cache/binary-cache
+
+BINARIES=
+BINARIES="$BINARIES /bin/busybox"
+
+LDD="$(which ldd)"
+if ! [ -x "$LDD" ]; then
+	echo "E: ldd not found"
+	exit 1
+fi >&2
+
+READLINK="$(which readlink)"
+if ! [ -x "$READLINK" ]; then
+	echo "E: readlink not found"
+	exit 1
+fi >&2
+
+mkdir -p "$CACHE"
+CACHE="$($READLINK -f "$CACHE")"
+
+ldd_get_binary_loader() {
+	"$LDD" /bin/sh | awk '$0 !~ / => / {print $1}'
+}
+
+ldd_all_realfile() {
+	for bin in $BINARIES; do
+		[ -x "$bin" ] || bin="$(which "$bin")"
+		[ -x "$bin" ] || continue
+		bin="$(readlink -f "$bin")"
+		echo "$bin"
+		"$LDD" "$bin"
+	done | \
+		grep -oE "/[^ ]+" | \
+		sort -u | \
+			while read file; do
+				readlink -f "$file"
+			done
+}
+
+_X() {
+	( set -x
+		"$@"
+	)
+}
+
+start() {
+	ldd_all_realfile | while read bin; do
+		cache="$CACHE/${bin#/}"
+		cache_dir="${cache%/*}"
+		if [ ! -f "$cache" ]; then
+			mkdir -p "$cache_dir"
+			cp -a "$bin" "$cache"
+		fi
+		if ! grep " $bin " /proc/mounts > /dev/null 2>&1; then
+			if mount -o bind "$cache" "$bin"; then
+				echo "I: binary cache of $bin ($cache)"
+			else
+				rm -f "$cache"
+			fi
+		fi
+	done
+}
+
+stop() {
+	if [ -z "$ROM_LD" ]; then
+		export ROM_LD="$( ldd_get_binary_loader | sed -r -e 's@^@/rom@' )"
+		ROM_BUSYBOX="$( BINARIES=/bin/busybox ldd_all_realfile | \
+			sed -r -n -e '/\/bin\// s@^@/rom@ p'
+		)"
+		ROM_LIBDIR="$( BINARIES=/bin/busybox ldd_all_realfile | \
+			sed -r -n -e '/\/lib\/.*\.so/ s@^@/rom@ p' | \
+			sed -r -e 's@/[^/]+$@@' | \
+			sort -u
+		)"
+		LD_LIBRARY_PATH=
+		for dir in $ROM_LIBDIR; do
+			LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$dir"
+		done
+		export LD_LIBRARY_PATH="${LD_LIBRARY_PATH#:}"
+		#echo "I: ROM_LD=$ROM_LD"
+		#echo "I: LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+		if [ -x "$ROM_LD" ] && [ -x "$ROM_BUSYBOX" ] && "$ROM_LD" "$ROM_BUSYBOX" true; then
+			echo "I: stop using binaries from /rom"
+			exec "$ROM_LD" "$ROM_BUSYBOX" sh -c ". $initscript; stop"
+			export ROM_LD=
+			export LD_LIBRARY_PATH=
+			echo "W: could not call shell from /rom" >&2
+		fi
+	fi
+
+	find "$CACHE" -type f | while read cache; do
+		cache="$cache"
+		cachedir="${cache%/*}"
+		case "$cache" in
+			"$CACHE"/*/.move.* )
+				bin="${cachedir#$CACHE}/${cache#$cachedir/.move.}"
+				cache="${CACHE}/${bin#/}"
+				;;
+			* )
+				bin="${cache#$CACHE}"
+				;;
+		esac
+		move="${cache%/*}/.move.${cache##*/}"
+
+		if  grep " $bin " /proc/mounts > /dev/null 2>&1; then
+			if ! grep " $move " /proc/mounts > /dev/null 2>&1; then
+				[ -f "$move" ] || \
+					: > "$move"
+				mount -o move "$bin" "$move" || \
+					rm "$move"
+				echo "I: '$bin': moved to intermediate cache"
+			fi
+		else
+			rm -f "$cache"
+		fi
+
+		if grep " $move " /proc/mounts > /dev/null 2>&1; then
+			if umount "$move" 2> /dev/null; then
+				echo "I: '$bin': unmounted cache of '$bin'"
+			else
+				echo "E: '$bin': cache of '$bin' still in use."
+			fi
+			rm -f "$cache"
+		fi
+		rm -f "$move" 2> /dev/null
+	done
+	if [ -z "$ROM_LD" ]; then
+		echo "I: execute stop, twice"
+		export ROM_LD=no
+		exec "$initscript" stop
+	fi
+	[ -d "$CACHE" ] && \
+		find "$CACHE" -type d -exec rmdir {} \; 2> /dev/null
+}
+
