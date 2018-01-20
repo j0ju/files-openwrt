@@ -77,7 +77,6 @@ stop() {
   [ "$1" = -F ] && \
     F="-F"
   local pkgs="$(P status 2> /dev/null | cut -f1 -d' ')"
-  #local pkgs="$( cd "$RAM_DIR/usr/lib/opkg/info"; ls -t *.list  2> /dev/null | sed -re 's/[.][^.]+$//' )"
   if [ -n "$pkgs" ]; then
     stop_installed_autostop_svcs "$action"
     P remove $F $pkgs

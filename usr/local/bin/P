@@ -1,13 +1,17 @@
 #!/bin/sh
 
 OPKG_DEST=ram
-RAM_DIR="$(grep "dest $OPKG_DEST" /etc/opkg.conf | cut -f 3 -d " " )"
-RAM_DIR="${RAM_DIR%/}"
+RAM_DIR="$(awk '$1 == "dest" && $2 == "'"$OPKG_DEST"'" { gsub("/+$", "", $3); print $3 }' /etc/opkg.conf)"
+LISTS_DIR="$(awk '$1 == "lists_dir" { gsub("/+$", "", $3); print $3 }' /etc/opkg.conf)"
 
 if ! [ -d "$RAM_DIR" ]; then
   mkdir -p "$RAM_DIR"
   [ -d "$RAM_DIR/tmp" ] || ln -s /tmp "$RAM_DIR"/tmp
   [ -d "$RAM_DIR/var" ] || ln -s /tmp "$RAM_DIR"/var
+fi
+
+if ! [ -d "$LISTS_DIR" ]; then
+  mkdir -p "$LISTS_DIR"
 fi
 
 _X() {
@@ -23,17 +27,35 @@ usage: wrapper arount opkg, use opkg for more help
 EOF
 }
 
+ensure_lists_updated() {
+  if ! ls "$LISTS_DIR"/* 2> /dev/null 1>&2; then
+    echo "I: no opkg package lists, we need an update"
+    opkg update > /dev/null
+    echo
+  fi >&2
+}
+
+tac() {
+  local line
+  if read line; then
+    tac
+    echo "$line"
+  fi
+}
+
 status() {
   opkg -o "$RAM_DIR" list
 }
 
 install() {
+  ensure_lists_updated
+
   local F=
   if [ "$1" = -F ]; then
     F=-F
     shift
   fi
-  opkg --noaction -d "$OPKG_DEST" install "$@" | awk '$1 == "Installing" { print $2 }' | sort -r | while read pkg; do
+  opkg --noaction -d "$OPKG_DEST" install "$@" | awk '$1 == "Installing" { print $2 }' | tac | while read pkg; do
     if $_X opkg -d "$OPKG_DEST" install "$pkg"; then :
       enable $F "$pkg"
       rm -f "$RAM_DIR/usr/lib/opkg/info/"*.postinst
@@ -42,16 +64,23 @@ install() {
 }
 
 remove() {
-  local pkg info=
+  local pkg pkgs
+  local info=
+
+  if [ "$1" = -a ]; then
+    pkgs="$(status | cut -f 1 -d ' ')"
+    remove $pkgs
+    return $?
+  fi
 
   for pkg in "$@"; do
     info="$info $pkg.list"
   done
 
   # try to get packges in configure order
-  local pkgs="$( cd "$RAM_DIR/usr/lib/opkg/info"; ls -t $info 2> /dev/null | sed -re 's/[.][^.]+$//')"
+  pkgs="$( cd "$RAM_DIR/usr/lib/opkg/info"; ls -t $info 2> /dev/null | sed -re 's/[.][^.]+$//')"
 
-  for pkg in "$@"; do
+  for pkg in $pkgs; do
     disable "$pkg"
     { 3>&1 1>&2 2>&3 3>&- \
       _X opkg -d "$OPKG_DEST" remove "$pkg" | \
@@ -131,6 +160,11 @@ disable() {
   done
 }
 
+query() {
+  ensure_lists_updated
+  opkg list | grep -i "$*"
+}
+
 cmd="$1"
 [ $# -gt 0 ] && shift
 
@@ -138,12 +172,13 @@ case "$cmd" in
   up | update ) opkg update ;;
   l | ls | li | list )  opkg list ;;
 
-  i | ins | install ) install "$@" ;;
-  rm | remove )       remove  "$@" ;;
-  s | st  | status  ) status  "$@" ;;
-  e | en  | enable  ) enable  "$@" ;;
-  d | di  | disable ) disable "$@" ;;
-  f | files )         files   "$@" ;;
+  i | ins | install )  install "$@" ;;
+  rm | remove )        remove  "$@" ;;
+  s | st  | status  )  status  "$@" ;;
+  e | en  | enable  )  enable  "$@" ;;
+  d | di  | disable )  disable "$@" ;;
+  f | files )          files   "$@" ;;
+  q | query | search ) query   "$@" ;;
 
   "" | help | -h | * ) usage ;;
 esac

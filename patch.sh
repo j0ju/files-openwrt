@@ -32,6 +32,7 @@ __PREFIX__="$BASEDIR" "$BASEDIR/usr/local/bin/update-rc"
   RC_TO_DISABLE="$RC_TO_DISABLE nfsd portmap"
   RC_TO_DISABLE="$RC_TO_DISABLE fstab btrfs-scan"
   RC_TO_DISABLE="$RC_TO_DISABLE usbmode"
+  RC_TO_DISABLE="$RC_TO_DISABLE dsl dsl_control"
   RC_TO_DISABLE="$RC_TO_DISABLE cron crond"
   RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns keepalived igmpproxy etherwake relayd"
   RC_TO_DISABLE="$RC_TO_DISABLE bird4 bird6"
@@ -88,5 +89,12 @@ done
     find . -type f             -exec chmod u+rw,go+r                {} +
     find . -type f -perm /0111 -exec chmod u+rwx,go+rx              {} +
     chmod 1777 tmp
+  )
+#}
+#{ move opkg ram directory for ram-pkg and P
+  ( cd "$BASEDIR"
+    #- set opkg.conf ram destionation directory
+    sed -i -r -e 's@^(dest ram) .*$@\1 /var/lib/opkg-ram@' etc/opkg.conf
+    sed -i -r -e 's@^(lists_dir [^ ]+) .*$@\1 /var/cache/opkg-lists@' etc/opkg.conf
   )
 #}

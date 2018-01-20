@@ -1,9 +1,10 @@
 # config file for /etc/init.d/ram-pkg
 # for local packages installed in RAM available after uplink is avail
 #
-#- ncurses
-#terminfo
-#libncurses
+#- debugging aid
+#strace
+#lsof
+#diffutils
 
 #- collectd
 #collectd
@@ -24,21 +25,16 @@
 #collectd-mod-vmem
 #collectd-mod-wireless
 #collectd-mod-write-graphite
-#libiwinfo
-#libltdl
-#liboping
 
 # haveged - randomness daemon
-#libhavege
 #haveged
 
 #- pkill/pgrep - NEED: ncurses
-#procps-ng
 #procps-ng-pkill
 #procps-ng-ps
 
 #- htop - NEED: ncurses
-htop
+#htop
 
 #- vim - NEED: ncurses
 #vim
