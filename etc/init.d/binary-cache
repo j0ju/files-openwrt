@@ -1,8 +1,13 @@
 #!/bin/sh /etc/rc.common
-# Copyright (C) 2010-2014 OpenWrt.org
+# Copyright (C) 2017 Joerg Jungermann
 
 #ROM_LD=no
 CACHE=/var/cache/binary-cache
+
+# early start
+#START=11
+# normal start
+START=99
 
 BINARIES=
 BINARIES="$BINARIES /bin/busybox"
@@ -19,7 +24,10 @@ if ! [ -x "$READLINK" ]; then
 	exit 1
 fi >&2
 
-mkdir -p "$CACHE"
+if ! mkdir -p "$CACHE"; then
+	echo "E: could not create cache dir '$CACHE', ABORT"
+	exit 1
+fi >&2
 CACHE="$($READLINK -f "$CACHE")"
 
 ldd_get_binary_loader() {
@@ -84,7 +92,7 @@ stop() {
 		#echo "I: ROM_LD=$ROM_LD"
 		#echo "I: LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
 		if [ -x "$ROM_LD" ] && [ -x "$ROM_BUSYBOX" ] && "$ROM_LD" "$ROM_BUSYBOX" true; then
-			echo "I: stop using binaries from /rom"
+			#echo "I: using binaries from /rom"
 			exec "$ROM_LD" "$ROM_BUSYBOX" sh -c ". $initscript; stop"
 			export ROM_LD=
 			export LD_LIBRARY_PATH=
@@ -129,7 +137,7 @@ stop() {
 		rm -f "$move" 2> /dev/null
 	done
 	if [ -z "$ROM_LD" ]; then
-		echo "I: execute stop, twice"
+		#echo "I: will start stop()-method for a 2nd time"
 		export ROM_LD=no
 		exec "$initscript" stop
 	fi
