@@ -1,0 +1,99 @@
+#!/bin/sh
+
+usage() {
+  exec >&2
+  echo "${0##*/} [OP] [MODE] <FILESPEC>"
+  echo
+  echo "  OP        values: list(*) | diff"
+  echo "  MODE      values: all     | new | modified(*) | deleted"
+  echo "  FILESPEC  is a glob"
+  echo "    defaults(*)"
+  echo
+  exit 1
+}
+
+OP=list
+case "$1" in
+  l | list ) OP=list; shift ;;
+  d | diff ) OP=diff; shift ;;
+  "" ) ;;
+  * ) usage ;;
+esac
+
+MODE=MOD
+case "$1" in
+  m | mod | modified ) MODE=MOD; shift ;;
+  n | new )            MODE=NEW; shift ;;
+  d | del | deleted )  MODE=DEL; shift ;;
+  a | all )            MODE=ALL; shift ;;
+  "" ) ;;
+  * ) usage ;;
+esac
+
+OVLDIR="$(cd /; cd /overlay 2>/dev/null; cd upper 2>/dev/null; pwd)"
+if [ "/" = "$OVLDIR" ]; then
+  echo "E: overlay directory not found, abort"
+  exit 1
+fi >&2
+
+ROMDIR="$(cd /; cd /rom 2>/dev/null; pwd)"
+if [ "/" = "$ROMDIR" ]; then
+  echo "E: /rom directory not found, abort"
+  exit 1
+fi >&2
+
+if [ "$OP" = diff ] && ! which diff 2> /dev/null 1>&2; then
+  echo "E: diff not found, abort"
+  exit 1
+fi >&2
+
+is_in_fspec() {
+  local file="$1"
+  shift
+  local fspec
+
+  [ "$#" = 0 ] && \
+    return 0
+
+  for fspec in "$@"; do
+    case "$fspec" in
+      *"*"* | *"?"* )  continue ;;
+      * ) [ -d "$fspec" ] && fspec="$fspec*" ;;
+    esac
+
+    case "$file" in
+      $fspec ) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+find "$OVLDIR" | while read ovlfile; do
+  file="${ovlfile#$OVLDIR}"
+  rom="$ROMDIR/${file#/}"
+
+  [ -d "$ovlfile" ] && \
+    continue
+
+  is_in_fspec "$file" "$@" || \
+    continue
+
+  state=NEW
+  if [ -c "$ovlfile" ]; then
+    state=DEL
+  elif [ -f "$rom" ]; then
+    state=MOD
+  fi
+
+  [ "$state" = "$MODE" ] || \
+    [ "$MODE" = ALL ] || \
+    continue
+
+  if [ "$OP" = "list" ]; then
+    echo " $state $file"
+  elif [ "$OP" = "diff" ]; then
+    diff -u -a -N --ignore-all-space --ignore-blank-lines "$rom" "$ovlfile" | \
+      awk '$1 == "---" || $1 == "+++" {$2= "'"$file"'"} { print $0}'
+  fi
+
+done
