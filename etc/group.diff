@@ -1,0 +1,11 @@
+--- /etc/group 2018-01-10 10:03:52.000000000 +0100
++++ /etc/group 2018-01-10 10:15:47.000000000 +0100
+@@ -7,5 +7,7 @@
+ ftp:x:55:
+ users:x:100:
+ network:x:101:
+-nogroup:x:65534:
+ dnsmasq:x:453:dnsmasq
++bird:x:479:
++collectd:x:499:
++nogroup:x:65534:
