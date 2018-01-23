@@ -49,7 +49,7 @@
 +  resolv_initscript
 +
 +case "$action" in
-+  running | enabled | en | disable | dis ) ;;
++  running | enabled | en | disable | dis | help | "" ) ;;
 +  *)
 +    #mkdir -p /var/log
 +    #env | sort > "/var/log/${initscript##*/}.init${rcstep:+.$rcstep}.$action.$$.env"
