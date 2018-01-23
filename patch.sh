@@ -2,7 +2,7 @@
 # vim: foldmethod=marker:foldmarker=#{,#}
 BASEDIR="${0%/*}"
 set -e
-#set -x
+set -x
 umask 022
 
 #{ modify preinit to load from /etc/modules-boot.d/ before
@@ -36,6 +36,7 @@ __PREFIX__="$BASEDIR" "$BASEDIR/usr/local/bin/update-rc"
   RC_TO_DISABLE="$RC_TO_DISABLE cron crond"
   RC_TO_DISABLE="$RC_TO_DISABLE ipset-dns keepalived igmpproxy etherwake relayd"
   RC_TO_DISABLE="$RC_TO_DISABLE bird4 bird6"
+  RC_TO_DISABLE="$RC_TO_DISABLE ram-pkg binary-cache"
 
   for _rc in $RC_TO_DISABLE; do
     rm -f "$BASEDIR/etc/rc.d/"S[0-9][0-9]$_rc
@@ -73,14 +74,50 @@ done
 #}
 #{ patch openwrt files
   ( cd "$BASEDIR"
-  set -x
     find . -name "*.diff" | while read diff; do
       file="${diff#./}"
       file="${file%.diff}"
+      case "$file" in
+        /etc/rc.d/* )
+          rm -f  $diff
+          continue
+          ;;
+      esac
       echo "* /$file"
       awk '($1 == "---" || $1 == "+++") && $2 = "'"$file"'" {  } {print $0}' "$diff" | patch -p0 && \
-        rm -f "$diff"
+        rm -f "$diff" || \
+        exit $?
     done
+
+    find -name "*.rej"  -delete || :
+    find -name "*.orig" -delete || :
+    find -name "*.diff" -delete || :
+  )
+#}
+#{ configure opkg
+  ( cd "$BASEDIR"
+  #- set opkg.conf ram destionation directory
+    sed -i -r -e 's@^(dest ram) .*$@\1 /var/lib/opkg-ram@' etc/opkg.conf
+    sed -i -r -e 's@^(lists_dir [^ ]+) .*$@\1 /var/cache/opkg-lists@' etc/opkg.conf
+  #- opkg - no local feeds
+    sed -i -e '/_local/ d' etc/opkg/distfeeds.conf
+  )
+#}
+#{ try to remove some files
+  ( cd "$BASEDIR"
+    rmdir 2> /dev/null \
+      www \
+      opt \
+      srv \
+      || : #
+    rm -f 2> /dev/null \
+      etc/config/igmpproxy \
+      etc/config/keepalived \
+      etc/config/etherwake \
+      etc/config/openvpn \
+      etc/bird?.conf \
+      etc/keepalived/keepalived.conf \
+      || : #
   )
 #}
 #{ ensure correct permissions
@@ -89,12 +126,5 @@ done
     find . -type f             -exec chmod u+rw,go+r                {} +
     find . -type f -perm /0111 -exec chmod u+rwx,go+rx              {} +
     chmod 1777 tmp
-  )
-#}
-#{ move opkg ram directory for ram-pkg and P
-  ( cd "$BASEDIR"
-    #- set opkg.conf ram destionation directory
-    sed -i -r -e 's@^(dest ram) .*$@\1 /var/lib/opkg-ram@' etc/opkg.conf
-    sed -i -r -e 's@^(lists_dir [^ ]+) .*$@\1 /var/cache/opkg-lists@' etc/opkg.conf
   )
 #}
