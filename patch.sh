@@ -55,7 +55,7 @@ find_bin() {
   [ -x "$bin" ] && echo "$dir/$1" || :
 }
 
-grep -E -o '(proto_run_command [^ ]+ )([^\ ]+)' "$BASEDIR"/lib/netifd/proto/* 2> /dev/null | while read file; do
+grep -E -o '(proto_run_command +[^ ]+ )([^ ]+)' "$BASEDIR"/lib/netifd/proto/* 2> /dev/null | while read file; do
   cd "$BASEDIR"
   file="${file#$BASEDIR}"
   line="${file#*:}"
@@ -69,7 +69,7 @@ grep -E -o '(proto_run_command [^ ]+ )([^\ ]+)' "$BASEDIR"/lib/netifd/proto/* 2>
   [ -n "$real_proc" ] || continue
   [ -x "$BASEDIR/$real_proc" ] || continue
 
-  sed -i -re 's@(proto_run_command [^ ]+ )([^ ]+)@\1'"$real_proc"'@' "$BASEDIR/$file"
+  sed -i -re 's@(proto_run_command +[^ ]+ )([^ ]+)@\1'"$real_proc"'@' "$BASEDIR/$file"
 done
 #}
 #{ patch openwrt files
@@ -78,7 +78,7 @@ done
       file="${diff#./}"
       file="${file%.diff}"
       case "$file" in
-        /etc/rc.d/* )
+        etc/rc.d/* )
           rm -f  $diff
           continue
           ;;
