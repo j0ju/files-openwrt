@@ -10,7 +10,7 @@ RAM_DIR="${RAM_DIR%/}"
 PKG_LIST=/etc/ram-pkg.list
 
 boot() {
-  exec > /tmp/ram-pkg.boot.log 2>&1
+  exec > /var/run/ram-pkg.boot.log 2>&1
   echo "--- $(date)"
   set -x
   backgrounded_start -F &
@@ -49,12 +49,14 @@ list_installed_autostop_svcs() {
 
 start_installed_autostart_svcs() {
   list_installed_autostart_svcs | while read f; do
-    "$f" "$action"
+    echo "I: $f $action" 
+    "$f" "$action" || :
   done
 }
 
 stop_installed_autostop_svcs() {
   list_installed_autostart_svcs | while read f; do
+    echo "I: $f $action" 
     "$f" "$action"
   done
 }

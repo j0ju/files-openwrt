@@ -6,36 +6,37 @@
 #lsof
 #diffutils
 
+#- pkill/pgrep
+#procps-ng-pkill
+#procps-ng-ps
+
+#- htop
+#htop
+
+#- vim
+#vim
+#vim-full
+
+#- haveged - randomness daemon
+#haveged
+
 #- collectd
-#collectd
-#collectd-mod-conntrack
+#collectd-mod-syslog
+#collectd-mod-write-graphite
 #collectd-mod-df
 #collectd-mod-disk
 #collectd-mod-entropy
 #collectd-mod-exec
 #collectd-mod-interface
-#collectd-mod-iwinfo
 #collectd-mod-load
 #collectd-mod-memory
-#collectd-mod-ping
 #collectd-mod-processes
-#collectd-mod-syslog
-#collectd-mod-thermal
-#collectd-mod-uptime
+#collectd-mod-cpu
+#collectd-mod-iwinfo
+#collectd-mod-conntrack
+#collectd-mod-ping
+#collectd-mod-contextswitch
 #collectd-mod-vmem
-#collectd-mod-wireless
-#collectd-mod-write-graphite
-
-# haveged - randomness daemon
-#haveged
-
-#- pkill/pgrep - NEED: ncurses
-#procps-ng-pkill
-#procps-ng-ps
-
-#- htop - NEED: ncurses
-#htop
-
-#- vim - NEED: ncurses
-#vim
-#vim-full
+#collectd-mod-table
+#collectd-mod-tail
+#collectd-mod-uptime

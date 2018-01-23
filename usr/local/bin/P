@@ -23,7 +23,7 @@ _X() {
 usage() {
 cat >&2 << EOF
 usage: wrapper arount opkg, use opkg for more help
-  $0 list | status | install | remove | enable | disable | update | files
+  $0 list | status | install | remove | enable | disable | update | files | search | query
 EOF
 }
 
@@ -55,11 +55,14 @@ install() {
     F=-F
     shift
   fi
-  opkg --noaction -d "$OPKG_DEST" install "$@" | awk '$1 == "Installing" { print $2 }' | tac | while read pkg; do
-    if $_X opkg -d "$OPKG_DEST" install "$pkg"; then :
-      enable $F "$pkg"
-      rm -f "$RAM_DIR/usr/lib/opkg/info/"*.postinst
-    fi
+
+  for pkg in "$@"; do
+    opkg --noaction -d "$OPKG_DEST" install "$pkg" | awk '$1 == "Installing" { print $2 }' | tac | while read pkg; do
+      if opkg -d "$OPKG_DEST" install "$pkg"; then :
+        enable $F "$pkg"
+        rm -f "$RAM_DIR/usr/lib/opkg/info/"*.postinst
+      fi
+    done
   done
 }
 
@@ -83,7 +86,7 @@ remove() {
   for pkg in $pkgs; do
     disable "$pkg"
     { 3>&1 1>&2 2>&3 3>&- \
-      _X opkg -d "$OPKG_DEST" remove "$pkg" | \
+      opkg -d "$OPKG_DEST" remove "$pkg" | \
         sed -e "/^cat: can't open / d"
     } 3>&1 1>&2 2>&3 3>&-
   done
@@ -94,7 +97,7 @@ files() {
 }
 
 enable() {
-  local p files src dst rlink dir
+  local p files src dst rlink dir op tmp
   local F=
   if [ "$1" = -F ]; then
     F=-f
@@ -104,6 +107,35 @@ enable() {
     files "$p" | while read src; do
       [ -f "$src" ] || continue
       dst="${src#$RAM_DIR}"
+      op=
+
+      case "$dst" in
+        /lib/upgrade/* ) # NOP
+          rm -f "$src"
+	  continue
+          ;;
+        /usr/lib/collectd/* | \
+        /usr/share/collectd/* | \
+        /usr/share/terminfo/* )
+          tmp="${dst#/*/*/*/}"
+          dst="${dst%/$tmp}"
+          src="${RAM_DIR%/}/${dst#/}"
+          op=ln
+          ;;
+        /etc/init.d/* )
+          op=ln
+          ;;
+        /etc/* )
+          op=cp
+          ;;
+        /lib/* | /usr/* | /www/* )
+          op=ln
+          ;;
+        * )
+          echo "E: unknown destination $dst, SKIP" >&2
+          continue
+          ;;
+      esac
 
       if [ -L "$dst" ]; then
         rlink="$(readlink "$dst")"
@@ -111,7 +143,7 @@ enable() {
           continue
       fi
 
-      if [ -n "$F" ] && [ -f "$dst" ]; then
+      if [ -z "$F" ] && [ -f "$dst" ]; then
         echo "I: would install $dst, but file already exists."
         continue
       fi
@@ -119,21 +151,32 @@ enable() {
       dir="${dst%/*}"
       mkdir -p "$dir"
 
-      case "$dst" in
-        /lib/upgrade/* )
-          # NOP
+      case "$op" in
+        ln )
+          opfmt=" LN$F "
+          ln -s $F "$src" "$dst"
           ;;
-        /etc/* )
-          local OP="CP$F "
+	cp )
+          opfmt=" CP$F "
           cp -a $F "$src" "$dst"
           ;;
         * )
-          local OP="LN$F "
-          ln -s $F "$src" "$dst"
+          echo "E: unknown op $op src=$src dst=$dst, SKIP" >&2
+          continue
           ;;
       esac
-      echo "$OP $dst"
 
+      [ -n "$opfmt" ] && \
+	echo "$opfmt $dst"
+
+      #case "$op:$dst" in
+      #  *:/etc/init.d/* ) 
+      #    ;; # this is needed for init.d/ram-pkg
+      #  cp:/etc/* ) 
+      #    rm -f "$src"
+      #    continue
+      #    ;;
+      #esac
     done
   done
 }
@@ -173,7 +216,7 @@ case "$cmd" in
   l | ls | li | list )  opkg list ;;
 
   i | ins | install )  install "$@" ;;
-  rm | remove )        remove  "$@" ;;
+  r | rm | remove )        remove  "$@" ;;
   s | st  | status  )  status  "$@" ;;
   e | en  | enable  )  enable  "$@" ;;
   d | di  | disable )  disable "$@" ;;
