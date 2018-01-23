@@ -16,8 +16,8 @@
   rm -f /init
 
 #- generate sane defaults to hostname and TZ
-  uci set system.@system[0].hostname="$DEFAULT_HOSTNAME"
-  sysctl -w kernel.hostname="$DEFAULT_HOSTNAME"
+  #uci set system.@system[0].hostname="$DEFAULT_HOSTNAME"
+  #sysctl -w kernel.hostname="$DEFAULT_HOSTNAME"
 
   uci set system.@system[0].timezone="$DEFAULT_TZ"
   echo "$DEFAULT_TZ" > /var/TZ
@@ -25,7 +25,8 @@
   ln -sf /usr/share/zoneinfo/$DEFAULT_ZONENAME /tmp/localtime
 
 
-#- uci modifications
+#- set wireless defaults
+  if uci get wireless.default_radio0.ssid | grep -iE '^(openwrt|lede|ltq)$'; then
   #- disable wifi
     uci set wireless.radio0.disabled=1
     #uci set wireless.radio0.country=DE
@@ -47,6 +48,7 @@
     uci set wireless.@wifi-iface[0].ssid=ltq
     uci set wireless.@wifi-iface[0].encryption="mixed-psk+ccmp"
     uci set wireless.@wifi-iface[0].key="lantiqXRX!"
+  fi
 
 #- uci commit
   uci commit
