@@ -20,6 +20,9 @@
 #- haveged - randomness daemon
 #haveged
 
+#- basic LuCi
+#luci
+
 #- collectd
 #collectd-mod-syslog
 #collectd-mod-write-graphite

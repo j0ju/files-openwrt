@@ -27,6 +27,57 @@ usage: wrapper arount opkg, use opkg for more help
 EOF
 }
 
+# assume mapping $src <-> $dst with
+#    $src <-> $prefix/$src = $dst
+install_files_mapper() {
+  local op=
+  local src="$1"
+  local dst="${src#$RAM_DIR}"
+  case "$dst" in
+  # ignores
+    /lib/upgrade/* ) # NOP
+      op=cp
+      continue
+      ;;
+  # 2-dirs deep
+    /www/luci-static/* )
+      tmp="${dst#/*/*/}"
+      dst="${dst%/$tmp}"; dst="${dst%/}"
+      op=ln
+      ;;
+  # 3-dirs deep
+    /usr/lib/collectd/* | \
+    /usr/share/collectd/* | \
+    /usr/share/terminfo/* )
+      tmp="${dst#/*/*/*/}"
+      dst="${dst%/$tmp}"; dst="${dst%/}"
+      op=ln
+      ;;
+  # 4-dirs deep
+    /usr/lib/lua/luci/* )
+      tmp="${dst#/*/*/*/*/}"
+      dst="${dst%/$tmp}"; dst="${dst%/}"
+      op=ln
+      ;;
+    /etc/init.d/* )
+      op=ln
+      ;;
+    /etc/* )
+      op=cp
+      ;;
+    /lib/* | /bin/* | /sbin/* | /www/* | \
+    /usr/lib/* | /usr/bin/* | /usr/sbin/* | /usr/share/* )
+      op=ln
+      ;;
+    * )
+      echo "E: unknown destination $dst, SKIP" >&2
+      continue
+      ;;
+    esac
+
+    echo "$op:$dst"
+}
+
 ensure_lists_updated() {
   if ! ls "$LISTS_DIR"/* 2> /dev/null 1>&2; then
     echo "I: no opkg package lists, we need an update"
@@ -106,36 +157,14 @@ enable() {
   for p in "$@"; do
     files "$p" | while read src; do
       [ -f "$src" ] || continue
-      dst="${src#$RAM_DIR}"
-      op=
 
-      case "$dst" in
-        /lib/upgrade/* ) # NOP
-          rm -f "$src"
-	  continue
-          ;;
-        /usr/lib/collectd/* | \
-        /usr/share/collectd/* | \
-        /usr/share/terminfo/* )
-          tmp="${dst#/*/*/*/}"
-          dst="${dst%/$tmp}"
-          src="${RAM_DIR%/}/${dst#/}"
-          op=ln
-          ;;
-        /etc/init.d/* )
-          op=ln
-          ;;
-        /etc/* )
-          op=cp
-          ;;
-        /lib/* | /usr/* | /www/* )
-          op=ln
-          ;;
-        * )
-          echo "E: unknown destination $dst, SKIP" >&2
-          continue
-          ;;
-      esac
+      # assume mapping $src <-> $dst with
+      #    $src <-> $prefix/$src = $dst
+      op="$(install_files_mapper "$src")"
+      dst="${op#*:}"
+      op="${op%:$dst}"
+      src="$RAM_DIR/${dst#/}"
+      #echo "$op $dst <- $src"; continue
 
       if [ -L "$dst" ]; then
         rlink="$(readlink "$dst")"
@@ -169,14 +198,6 @@ enable() {
       [ -n "$opfmt" ] && \
 	echo "$opfmt $dst"
 
-      #case "$op:$dst" in
-      #  *:/etc/init.d/* ) 
-      #    ;; # this is needed for init.d/ram-pkg
-      #  cp:/etc/* ) 
-      #    rm -f "$src"
-      #    continue
-      #    ;;
-      #esac
     done
   done
 }
@@ -186,19 +207,64 @@ disable() {
   for p in "$@"; do
     files "$p" | sort -r | while read src; do
       [ -f "$src" ] || continue
-      dst="${src#$RAM_DIR}"
 
-      if   [ -L "$dst" ]; then
-        rlink="$(readlink "$dst")"
-        [ "$rlink" = "$src" ] && \
-          _X rm -f "$dst"
-	  continue
-      elif [ -d "$src" ]; then
-	rmdir "$d" 2> /dev/null
-      elif [ -f "$dst" ]; then
-        echo "I: would uninstall $dst, but it is not linked."
+      # assume mapping $src <-> $dst with
+      #    $src <-> $prefix/$src = $dst
+      op="$(install_files_mapper "$src")"
+      dst="${op#*:}"
+      op="${op%:$dst}"
+      src="$RAM_DIR/${dst#/}"
+      dst="${src#$RAM_DIR}"
+      #echo "$op $dst <- $src"; continue
+
+      if [ -f "$dst" ]; then :
+      elif [ -d "$dst" ]; then :
+      elif [ -L "$dst" ]; then :
+      else
         continue
       fi
+
+      if   [ -L "$dst" ]; then
+        if [ -d "$dst" ] && ls "$dst"/* 2> /dev/null 1>&2; then
+          op=nop
+        else
+          rlink="$(readlink "$dst")"
+          [ "$rlink" = "$src" ] && \
+            op=rm
+        fi
+      elif [ -d "$src" ]; then
+        op=rmdir
+      elif [ -f "$dst" ]; then
+        if [ -x "$(which cmp)" ] && cmp "$src" "$dst" > /dev/null; then
+          op=rm
+          echo "I: $dst is a file, without a diff, rm."
+        else
+          op=nop
+          echo "I: $dst is a file, modified, KEEP"
+        fi
+      fi
+
+      case "$op" in
+        nop)
+	  opfmt=
+          ;;
+        rmdir )
+          opfmt=" RMDIR "
+          rmdir "$d" 2> /dev/null
+          ;;
+	rm )
+          opfmt=" RM    "
+          rm -f "$dst"
+          ;;
+        * )
+          echo "E: unknown op $op src=$src dst=$dst, SKIP" >&2
+          continue
+          ;;
+      esac
+
+      [ -n "$opfmt" ] && \
+	echo "$opfmt $dst"
+
     done
   done
 }

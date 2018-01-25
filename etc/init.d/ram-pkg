@@ -13,9 +13,8 @@ boot() {
   exec > /var/run/ram-pkg.boot.log 2>&1
   echo "--- $(date)"
   set -x
-  backgrounded_start -F &
+  start &
 }
-start() { backgrounded_start "$@"; }
 restart() { start; }
 reload() { start; }
 
@@ -36,51 +35,45 @@ list_installed_autostart_svcs() {
   done | sort -n
 }
 
-list_installed_autostop_svcs() {
+list_installed_svcs() {
   local i l
   for i in "$RAM_DIR/etc/init.d"/*; do
     i="${i#$RAM_DIR}"
     [ -x "$i" ] || \
       continue
     l="${i##*/}"
-    ls -l /etc/rc.d/K* | awk '/..\/init.d\/'"$l"'/ {print $(NF-2)}'
+    ls -1 /etc/rc.d/K??$l "/etc/init.d/$l" "$RAM_PKG/etc/init.d/$l" 2> /dev/null | head -n 1
   done | sort -n
 }
 
 start_installed_autostart_svcs() {
   list_installed_autostart_svcs | while read f; do
-    echo "I: $f $action" 
+    echo "I: $f $action"
     "$f" "$action" || :
   done
 }
 
 stop_installed_autostop_svcs() {
-  list_installed_autostart_svcs | while read f; do
-    echo "I: $f $action" 
+  list_installed_svcs | while read f; do
+    echo "I: $f $action"
     "$f" "$action"
   done
 }
 
-backgrounded_start() {
-  local F
-  [ "$1" = -F ] && \
-    F="-F"
+start() {
   local pkgs="$(grep -v ^# "$PKG_LIST" 2> /dev/null | grep -Ev '^ *$')"
   if [ -n "$pkgs" ]; then
     wait_opkg_list_update
-    if P install $F $pkgs; then
+    if P install $pkgs; then
       start_installed_autostart_svcs
     fi
   fi
 }
 
 stop() {
-  local F
-  [ "$1" = -F ] && \
-    F="-F"
   local pkgs="$(P status 2> /dev/null | cut -f1 -d' ')"
   if [ -n "$pkgs" ]; then
     stop_installed_autostop_svcs "$action"
-    P remove $F $pkgs
+    P remove $pkgs
   fi
 }
