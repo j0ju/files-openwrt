@@ -92,6 +92,7 @@ done
     find -name "*.rej"  -delete || :
     find -name "*.orig" -delete || :
     find -name "*.diff" -delete || :
+    find -name ".*.sw[a-z]" -delete || :
   )
 #}
 #{ configure opkg
