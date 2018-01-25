@@ -13,14 +13,23 @@ usage() {
 }
 
 OP=list
+MODE=MOD
+CLEANUP=no
 case "$1" in
   l | list ) OP=list; shift ;;
   d | diff ) OP=diff; shift ;;
+  cleanup  )
+    OP=cleanup; shift
+    MODE=ALL
+    if [ "$1" = -F ]; then
+      CLEANUP=yes
+      shift
+    fi
+    ;;
   "" ) ;;
   * ) usage ;;
 esac
 
-MODE=MOD
 case "$1" in
   m | mod | modified ) MODE=MOD; shift ;;
   n | new )            MODE=NEW; shift ;;
@@ -47,6 +56,12 @@ if [ "$OP" = diff ] && ! which diff 2> /dev/null 1>&2; then
   exit 1
 fi >&2
 
+_X() {
+  ( set -x
+    "$@"
+  )
+}
+
 is_in_fspec() {
   local file="$1"
   shift
@@ -70,7 +85,7 @@ is_in_fspec() {
 
 find "$OVLDIR" | while read ovlfile; do
   file="${ovlfile#$OVLDIR}"
-  rom="$ROMDIR/${file#/}"
+  romfile="$ROMDIR/${file#/}"
 
   [ -d "$ovlfile" ] && \
     continue
@@ -81,7 +96,7 @@ find "$OVLDIR" | while read ovlfile; do
   state=NEW
   if [ -c "$ovlfile" ]; then
     state=DEL
-  elif [ -f "$rom" ]; then
+  elif [ -f "$romfile" ]; then
     state=MOD
   fi
 
@@ -91,9 +106,43 @@ find "$OVLDIR" | while read ovlfile; do
 
   if [ "$OP" = "list" ]; then
     echo " $state $file"
+  elif [ "$OP" = "cleanup" ]; then
+    case "$state" in
+      NEW ) continue ;; # don't harm new files
+      DEL )
+        if ! [ -f "$romfile" ]; then
+          echo "I: file deleted in /overlay, but does not exist in /rom"
+          echo "   RM $ovlfile"
+          [ "$CLEANUP" = yes ] && \
+            _X rm "$ovlfile"
+        fi
+        ;;
+      MOD )
+        if [ -L "$file" ]; then
+          ovllink="$(readlink "$ovlfile")"
+          romlink="$(readlink "$romfile")"
+          if [ "$romlink" = "$ovllink" ]; then
+            echo "I: link equals /rom"
+            echo "   RM $ovlfile"
+            [ "$CLEANUP" = yes ] && \
+              _X rm "$ovlfile"
+          fi
+        elif [ -f "$file" ]; then
+          if cmp -s "$file" "$romfile" > /dev/null; then
+            echo "I: file equals /rom"
+            echo "   RM $ovlfile"
+            [ "$CLEANUP" = yes ] && \
+              _X rm "$ovlfile"
+          fi
+        fi
+        ;;
+      * )
+        echo "E: unknown state='$STATE' $file $romfile <-> $ovlfile, SKIP" >&2
+        continue
+        ;;
+    esac
   elif [ "$OP" = "diff" ]; then
-    diff -u -a -N --ignore-all-space --ignore-blank-lines "$rom" "$ovlfile" | \
+    diff -u -a -N --ignore-all-space --ignore-blank-lines "$romfile" "$ovlfile" | \
       awk '$1 == "---" || $1 == "+++" {$2= "'"$file"'"} { print $0}'
   fi
-
 done
