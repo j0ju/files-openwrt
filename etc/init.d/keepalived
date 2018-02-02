@@ -1,0 +1,33 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007-2015 OpenWrt.org
+
+START=99
+STOP=01
+
+USE_PROCD=1
+KEEPALIVED_CONF=/etc/keepalived/keepalived.conf
+
+reload_service() {
+	running && {
+		PID=$(pgrep -o /usr/sbin/keepalived)
+		kill -SIGHUP $PID
+		return 0
+	}
+	return 1
+}
+
+start_service() {
+	procd_open_instance
+	procd_set_param command /bin/busybox nice -n -5
+	procd_append_param command /usr/sbin/keepalived
+	procd_append_param command -n # don't daemonize, procd will handle that for us
+	procd_append_param command -f "$KEEPALIVED_CONF"
+	procd_append_param command -p /var/run/keepalived.pid
+	procd_append_param command -r /var/run/keepalived.vrrp.pid
+	procd_append_param command -c /var/run/keepalived.checker.pid
+
+	# set auto respawn behavior
+	procd_set_param respawn
+	procd_close_instance
+}
+

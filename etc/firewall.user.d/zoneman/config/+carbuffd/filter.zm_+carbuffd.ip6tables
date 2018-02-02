@@ -1,0 +1,4 @@
+*filter
+:zm_+carbuffd - [0:0]
+-A zm_+carbuffd -p tcp --dport 2003 -j ACCEPT
+COMMIT

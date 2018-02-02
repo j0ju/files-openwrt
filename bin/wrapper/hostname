@@ -1,0 +1,22 @@
+#!/bin/sh
+
+read hostname < /proc/sys/kernel/hostname
+
+case "$1" in
+  -f )
+    if ip="$(nslookup $hostname | awk '$1 == "Address" {print $NF; exit 0}')"; then
+      if fqdn="$(nslookup $ip | awk '/name = / { print $NF; exit 0}')"; then
+        echo "$fqdn"
+      else
+        echo "$hostname"
+      fi
+    else
+      echo "$hostname"
+    fi
+
+    ;;
+  * ) 
+    echo "$hostname"
+    ;;
+esac
+

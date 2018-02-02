@@ -1,0 +1,4 @@
+*filter
+:zm_+TOR - [0:0]
+-A zm_+TOR -p tcp --dport 9040 -j ACCEPT
+COMMIT

@@ -1,0 +1,5 @@
+*nat
+:zm_+TOR - [0:0]
+-A zm_+TOR -p tcp -d 9.0.0.0/8 -m state --state NEW -j REDIRECT --to-ports 9040
+-A zm_+TOR -p udp -d 9.0.0.0/8 -j REDIRECT --to-ports 9040
+COMMIT

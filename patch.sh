@@ -2,7 +2,7 @@
 # vim: foldmethod=marker:foldmarker=#{,#}
 BASEDIR="${0%/*}"
 set -e
-set -x
+#set -x
 umask 022
 
 #{ modify preinit to load from /etc/modules-boot.d/ before
@@ -23,7 +23,7 @@ __PREFIX__="$BASEDIR" "$BASEDIR/usr/local/bin/update-rc"
 #}
 #{ disable services
   RC_TO_DISABLE=
-  RC_TO_DISABLE="$RC_TO_DISABLE qos"
+  RC_TO_DISABLE="$RC_TO_DISABLE qos wshaper sqm"
   RC_TO_DISABLE="$RC_TO_DISABLE firewall"
   RC_TO_DISABLE="$RC_TO_DISABLE siproxd"
   RC_TO_DISABLE="$RC_TO_DISABLE fastd openvpn"
@@ -72,9 +72,30 @@ grep -E -o '(proto_run_command +[^ ]+ )([^ ]+)' "$BASEDIR"/lib/netifd/proto/* 2>
   sed -i -re 's@(proto_run_command +[^ ]+ )([^ ]+)@\1'"$real_proc"'@' "$BASEDIR/$file"
 done
 #}
+#{ add users and groups + sort
+  DEFAULT_ROOTHOME=/tmp
+  sed -i -r -e '/^root/ s@(root:[^:]+:[0-9]+:[0-9]+:[^:]+):[^:]+:(.*$)@\1:'"$DEFAULT_ROOTHOME"':\2@' etc/passwd
+  rm -f /init
+
+cat >> etc/passwd << EOF
+bird:x:479:479:bird:/var:/bin/false
+collectd:x:499:499:collectd:/tmp:/bin/false
+nobody:*:65534:65534:nobody:/var:/bin/false
+EOF
+  sort -n -t ':' -k3 etc/passwd > etc/passwd.$$ && \
+    mv -f etc/passwd.$$ etc/passwd
+
+cat >> etc/group << EOF
+bird:x:479:bird
+collectd:x:499:collectd
+EOF
+  sort -n -t ':' -k3 etc/group > etc/group.$$ && \
+    mv -f etc/group.$$ etc/group
+
+#}
 #{ patch openwrt files
   ( cd "$BASEDIR"
-    find . -name "*.diff" | while read diff; do
+    find . -xdev -name "*.diff" | while read diff; do
       file="${diff#./}"
       file="${file%.diff}"
       case "$file" in
@@ -84,15 +105,15 @@ done
           ;;
       esac
       echo "* /$file"
-      awk '($1 == "---" || $1 == "+++") && $2 = "'"$file"'" {  } {print $0}' "$diff" | patch -p0 && \
+      awk '($1 == "---" || $1 == "+++") { $2 = "'"$file"'" } {print $0}' "$diff" | patch -p0 && \
         rm -f "$diff" || \
         exit $?
     done
 
-    find -name "*.rej"  -delete || :
-    find -name "*.orig" -delete || :
-    find -name "*.diff" -delete || :
-    find -name ".*.sw[a-z]" -delete || :
+    find -xdev -name "*.rej"      -exec rm -f {} + || :
+    find -xdev -name "*.orig"     -exec rm -f {} + || :
+    find -xdev -name "*.diff"     -exec rm -f {} + || :
+    find -xdev -name ".*.sw[a-z]" -exec rm -f {} + || :
   )
 #}
 #{ configure opkg
@@ -111,11 +132,13 @@ done
       opt \
       srv \
       || : #
-    rm -f 2> /dev/null \
+    rm -rf 2> /dev/null \
       etc/config/igmpproxy \
       etc/config/keepalived \
       etc/config/etherwake \
       etc/config/openvpn \
+      etc/collectd* \
+      etc/keepalived* \
       etc/bird?.conf \
       etc/keepalived/keepalived.conf \
       || : #
@@ -123,9 +146,9 @@ done
 #}
 #{ ensure correct permissions
   ( cd "$BASEDIR"
-    find . -type d             -exec chmod u+rwx,go+rx,u-s,go-ws,-t {} +
-    find . -type f             -exec chmod u+rw,go+r                {} +
-    find . -type f -perm /0111 -exec chmod u+rwx,go+rx              {} +
+    find . -xdev -type d             -exec chmod u+rwx,go+rx,u-s,go-ws,-t {} +
+    find . -xdev -type f             -exec chmod u+rw,go+r                {} +
+    find . -xdev -type f -perm /0111 -exec chmod u+rwx,go+rx              {} +
     chmod 1777 tmp
   )
 #}

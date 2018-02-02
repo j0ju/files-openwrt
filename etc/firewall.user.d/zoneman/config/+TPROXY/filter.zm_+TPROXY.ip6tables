@@ -1,0 +1,4 @@
+*filter
+:zm_+TPROXY - [0:0]
+-A zm_+TPROXY -p tcp --dport 3128 -j ACCEPT
+COMMIT

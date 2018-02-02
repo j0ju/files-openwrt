@@ -278,11 +278,10 @@ cmd="$1"
 [ $# -gt 0 ] && shift
 
 case "$cmd" in
-  up | update ) opkg update ;;
-  l | ls | li | list )  opkg list ;;
-
+  u | up | update )    opkg update ;;
   i | ins | install )  install "$@" ;;
-  r | rm | remove )        remove  "$@" ;;
+  r | rm | remove )    remove  "$@" ;;
+  l | ls | li | list | \
   s | st  | status  )  status  "$@" ;;
   e | en  | enable  )  enable  "$@" ;;
   d | di  | disable )  disable "$@" ;;

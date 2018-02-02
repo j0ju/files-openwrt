@@ -1,0 +1,7 @@
+*filter
+:only_LOG+REJECT - [0:0]
+-A only_LOG+REJECT -p udp --dport 67 --sport 68 -j RETURN
+-A only_LOG+REJECT -p icmp --icmp-type ping -j RETURN
+-A only_LOG+REJECT -m conntrack --ctstate RELATED,ESTABLISHED,DNAT -j ACCEPT
+-A only_LOG+REJECT -j log_reject_filter
+COMMIT
